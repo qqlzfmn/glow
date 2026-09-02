@@ -351,6 +351,9 @@ protocol MenuContributor: AnyObject {
 **唯一配置来源**是显式配置文件 `~/.config/glow/usage.json`（0600）：
 `{"providers": [{"type": "new-api", "token": "...", "base_url": "https://...", "user_id": "1"}]}`。
 按用户决定，agent 配置文件（claude env / opencode auth.json）**不再**隐式启用任何 provider。
+
+> Usage Monitor 的 provider 矩阵、端点口径与解析行为参考并致敬
+> [cc-switch](https://github.com/farion1231/cc-switch)（MIT）。
 - **配置 GUI/CLI**：菜单 "Configure Providers…" 打开 Provider Settings
   窗口（双栏：左列全部 14 个类型及状态 configured/—，右侧按类型动态
   生成凭据表单，secret 字段密码框显示；保存后立即重新拉取）。CLI 侧
@@ -359,6 +362,16 @@ protocol MenuContributor: AnyObject {
 - 每次轮询前重新读取配置，改动无需重启 app；无任何配置时 usage.json 为空，菜单不显示 provider。
 
 CLI 子命令 `usage` 打印 usage.json 全文（JSON）。
+
+### 环境变量
+
+| 变量 | 作用 | 默认 |
+|---|---|---|
+| `GLOW_STATE_DIR` | 状态目录（sessions.json / usage.json / state.lock） | `/private/tmp/glow` |
+| `GLOW_SESSION_TTL_SECONDS` | 会话过期时间 | `86400` |
+| `GLOW_GUI_POLL_MS` | GUI 轮询 sessions.json 间隔 | `500` |
+| `GLOW_USAGE_POLL_SECONDS` | provider 用量轮询间隔（优先于 usage.json 的 `poll_seconds`，下限 10） | `300` |
+| `GLOW_HOME` | usage 配置根目录覆盖（tests / smoke 隔离用） | 用户主目录 |
 
 ## 5. 开发路线（M2 后本指南补齐）
 

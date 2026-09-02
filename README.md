@@ -81,6 +81,8 @@ $APP usage-config remove deepseek  # 移除
 - 自动刷新间隔：设置窗口底部的 "Auto refresh (min)"。
 - 所有 provider 都来自显式配置（`~/.config/glow/usage.json`，0600），不会被 agent 配置隐式启用。
 
+> Usage 功能 inspired by [cc-switch](https://github.com/farion1231/cc-switch)（MIT）——provider 矩阵与端点口径参考其实现。
+
 ### Hook 安装
 
 安装或修复本地 hook 最简单的方式是内置向导：

@@ -45,6 +45,9 @@ public enum CLIDispatch {
         case "install-hooks":
             return InstallHooksCLI.run(args)
 
+        case "uninstall-hooks":
+            return InstallHooksCLI.run(args, mode: .uninstall)
+
         case "clear-state":
             do {
                 try SessionStore.clearSessionState()

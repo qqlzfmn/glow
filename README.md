@@ -60,9 +60,12 @@ $APP install-hooks                    # 交互式选择
 $APP install-hooks --all -y           # 安装全部 Agent
 $APP install-hooks --agent codex --agent claude-code -y
 $APP install-hooks --agent omp --agent pi -y
+$APP uninstall-hooks --all -y         # 卸载全部 Agent 的 Glow hooks（对称逆操作，幂等）
 ```
 
 也可以右键菜单栏图标 → "Install Hooks" 子菜单，按 Agent 分别安装（Codex / Claude Code / omp / pi）。向导会识别已支持的 Agent，检查当前 hook 文件，写入前创建带时间戳的备份，并且只安装 Glow 自己的 hook 条目，保留同一事件下已有的其它 hook。
+
+卸载用 `uninstall-hooks`（参数与 install 一致，同样幂等、带时间戳备份、保留第三方 hook）：`$APP uninstall-hooks --all -y`，也可用 `--agent` 指定单个 Agent 或 `--dry-run` 预览。
 
 omp 与 pi 的安装方式不同：它们没有 JSON 配置，安装会把内置的 hook 扩展模板（`Resources/glow-hook-template.ts`）复制到用户级扩展目录（`~/.omp/agent/extensions/` 与 `~/.pi/agent/extensions/`），之后启动 agent 即自动加载、零参数联动状态灯。
 

@@ -21,9 +21,15 @@ enum HookInstaller {
 
     // MARK: - Inspection
 
+    /// Home 注入点：默认 NSHomeDirectory()；测试/验收通过 `GLOW_HOME` 环境变量
+    /// 重定向（NSHomeDirectory 不读 HOME env，故用独立变量名）。
+    static var defaultHome: String {
+        ProcessInfo.processInfo.environment["GLOW_HOME"] ?? NSHomeDirectory()
+    }
+
     /// `templateText` 为注入值（测试用）；默认 nil 时从 bundle 读取模板文本。
     static func inspectAgent(
-        _ agent: Agent, home: String = NSHomeDirectory(), templateText: String? = nil
+        _ agent: Agent, home: String = defaultHome, templateText: String? = nil
     ) -> AgentStatus {
         if agent.isTemplateInstall {
             let path = agent.configPath(inHome: home)
@@ -119,7 +125,7 @@ enum HookInstaller {
 
     /// `templateText` 为注入值（测试用）；默认 nil 时从 bundle 读取模板文本。
     static func installAgent(
-        _ agent: Agent, home: String = NSHomeDirectory(), templateText: String? = nil
+        _ agent: Agent, home: String = defaultHome, templateText: String? = nil
     ) throws {
         if agent.isTemplateInstall {
             try installTemplateHook(agent: agent, home: home, templateText: templateText)
@@ -172,7 +178,7 @@ enum HookInstaller {
     /// of being silently swallowed.
     @discardableResult
     static func installAgentAndReport(
-        _ agent: Agent, home: String = NSHomeDirectory(), templateText: String? = nil
+        _ agent: Agent, home: String = defaultHome, templateText: String? = nil
     ) -> AgentStatus {
         do {
             try installAgent(agent, home: home, templateText: templateText)
@@ -182,6 +188,110 @@ enum HookInstaller {
             return status
         }
         return inspectAgent(agent, home: home, templateText: templateText)
+    }
+
+    // MARK: - Uninstall
+
+    /// install 的对称逆操作。
+    /// - 模板型（omp/pi）：删除目标扩展文件（存在时先备份）；顺带清理同目录
+    ///   旧名残留 `observability-signal-light.ts`。文件不存在时静默返回（幂等）。
+    /// - JSON 型（codex/claude-code）：从 `hooks` 中移除所有 Glow 识别器匹配的
+    ///   条目（含历史兼容子串），组空删组、事件空删键；顶层 `hooks` 键保留
+    ///   （即使为空字典）。无效 JSON 直接 throw，绝不半改。
+    static func uninstallAgent(
+        _ agent: Agent, home: String = defaultHome, templateText: String? = nil
+    ) throws {
+        if agent.isTemplateInstall {
+            let target = agent.configPath(inHome: home)
+            let dir = (target as NSString).deletingLastPathComponent
+            let legacy = (dir as NSString).appendingPathComponent("observability-signal-light.ts")
+            for path in [target, legacy] where FileManager.default.fileExists(atPath: path) {
+                backupConfig(at: path, flavor: "uninstall")
+                try FileManager.default.removeItem(atPath: path)
+            }
+            return
+        }
+
+        let path = agent.configPath(inHome: home)
+        guard FileManager.default.fileExists(atPath: path) else { return } // 幂等 no-op
+        var (config, validJson) = loadJSONConfig(at: path)
+        guard validJson else {
+            throw InstallError.invalidJSON
+        }
+        guard var hooks = config["hooks"] as? [String: Any] else { return } // 无 hooks 键 → 无可卸载
+
+        var changed = false
+        for event in agent.events.keys {
+            guard let groups = hooks[event] as? [Any] else { continue }
+            var newGroups: [Any] = []
+            for group in groups {
+                guard let groupDict = group as? [String: Any],
+                      let groupHooks = groupDict["hooks"] as? [Any] else {
+                    newGroups.append(group)
+                    continue
+                }
+                let kept = groupHooks.filter { entry in
+                    guard let hook = entry as? [String: Any],
+                          hook["type"] as? String == "command",
+                          isGlowCommand(hook["command"] as? String, agent: agent) else {
+                        return true
+                    }
+                    changed = true
+                    return false
+                }
+                if kept.isEmpty {
+                    changed = true // 组内 hooks 为空 → 删该组
+                    continue
+                }
+                if kept.count != groupHooks.count {
+                    var newGroup = groupDict
+                    newGroup["hooks"] = kept
+                    newGroups.append(newGroup)
+                } else {
+                    newGroups.append(group)
+                }
+            }
+            if newGroups.isEmpty {
+                hooks.removeValue(forKey: event) // 事件数组为空 → 删该事件键
+            } else if changed {
+                hooks[event] = newGroups
+            }
+        }
+
+        guard changed else { return } // 无变更 → 幂等 no-op
+        config["hooks"] = hooks // 顶层 hooks 键保留（即使为空字典）
+
+        backupConfig(at: path, flavor: "uninstall")
+        let dir = (path as NSString).deletingLastPathComponent
+        try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
+        let data = try JSONSerialization.data(
+            withJSONObject: config, options: [.prettyPrinted, .withoutEscapingSlashes]
+        )
+        guard var text = String(data: data, encoding: .utf8) else {
+            throw InstallError.encodingFailed
+        }
+        text += "\n"
+        try text.write(toFile: path, atomically: true, encoding: .utf8)
+    }
+
+    /// Uninstall hooks for the given agent. Returns the status after uninstall.
+    /// `message` 语义：卸载前已安装（配置文件存在）→ "uninstalled"；
+    /// 本来就没装 → "not installed"。失败通过 "uninstall failed: …" 上报。
+    @discardableResult
+    static func uninstallAgentAndReport(
+        _ agent: Agent, home: String = defaultHome, templateText: String? = nil
+    ) -> AgentStatus {
+        let before = inspectAgent(agent, home: home, templateText: templateText)
+        do {
+            try uninstallAgent(agent, home: home, templateText: templateText)
+        } catch {
+            var status = inspectAgent(agent, home: home, templateText: templateText)
+            status.message = "uninstall failed: \(error)"
+            return status
+        }
+        var status = inspectAgent(agent, home: home, templateText: templateText)
+        status.message = before.installed ? "uninstalled" : "not installed"
+        return status
     }
 
     // MARK: - Internal helpers
@@ -201,11 +311,12 @@ enum HookInstaller {
         }
     }
 
-    private static func backupConfig(at path: String) {
+    /// `flavor`：install 写 `.bak-glow-install-<stamp>`，uninstall 写 `.bak-glow-uninstall-<stamp>`。
+    private static func backupConfig(at path: String, flavor: String = "install") {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyyMMdd-HHmmss"
         let stamp = formatter.string(from: Date())
-        let backupPath = path + ".bak-glow-install-\(stamp)"
+        let backupPath = path + ".bak-glow-\(flavor)-\(stamp)"
         try? FileManager.default.copyItem(atPath: path, toPath: backupPath)
     }
 
@@ -247,5 +358,6 @@ enum HookInstaller {
     enum InstallError: Error {
         case encodingFailed
         case templateMissing
+        case invalidJSON
     }
 }

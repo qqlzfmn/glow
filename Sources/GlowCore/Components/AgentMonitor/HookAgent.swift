@@ -62,7 +62,7 @@ extension HookInstaller {
         }
 
         var configPath: String {
-            configPath(inHome: NSHomeDirectory())
+            configPath(inHome: HookInstaller.defaultHome)
         }
 
         var events: [String: Int] {

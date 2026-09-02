@@ -55,6 +55,10 @@ final class StatusBarController {
         let allItem = NSMenuItem(title: "Install All", action: #selector(installHooks), keyEquivalent: "")
         allItem.target = self
         installMenu.addItem(allItem)
+        installMenu.addItem(NSMenuItem.separator())
+        let uninstallItem = NSMenuItem(title: "Uninstall All", action: #selector(uninstallHooks), keyEquivalent: "")
+        uninstallItem.target = self
+        installMenu.addItem(uninstallItem)
 
         let installItem = NSMenuItem(title: "Install Hooks", action: nil, keyEquivalent: "")
         installItem.submenu = installMenu
@@ -271,5 +275,20 @@ final class StatusBarController {
                 }
             }
         }
+    }
+
+    @objc private func uninstallHooks() {
+        var messages: [String] = []
+        for agent in HookInstaller.Agent.allCases {
+            let result = HookInstaller.uninstallAgentAndReport(agent)
+            messages.append("\(agent.displayName): \(result.message)")
+        }
+
+        let alert = NSAlert()
+        alert.messageText = "Hooks Uninstalled"
+        alert.informativeText = messages.joined(separator: "\n")
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
     }
 }

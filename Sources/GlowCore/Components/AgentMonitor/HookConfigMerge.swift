@@ -111,20 +111,26 @@ extension HookInstaller {
         return (replacementGroup, cleanedGroup, true)
     }
 
-    private static func isGlowCommand(_ command: String?, agent: Agent) -> Bool {
+    static func isGlowCommand(_ command: String?, agent: Agent) -> Bool {
         guard let command = command, !command.trimmingCharacters(in: .whitespaces).isEmpty else {
             return false
         }
         let parts = command.components(separatedBy: .whitespaces)
         let joined = parts.filter { !$0.isEmpty }.joined(separator: " ")
         // Current install shape first, then legacy substrings kept for
-        // compatibility with hooks installed by the previous app.
-        return joined.contains("Glow codex-hook")
+        // compatibility with hooks installed by the previous app. Finally,
+        // token-level compat: any command invoking this CLI's hook subcommands
+        // is a Glow entry regardless of the executable's name (covers renamed
+        // binaries, e.g. the swiftpm testing helper).
+        if joined.contains("Glow codex-hook")
             || joined.contains("Glow claude-code-hook")
             || joined.contains("signal-light codex-hook")
             || joined.contains("signal-light claude-code-hook")
             || joined.contains("SignalLightApp codex-hook")
-            || joined.contains("SignalLightApp claude-code-hook")
+            || joined.contains("SignalLightApp claude-code-hook") {
+            return true
+        }
+        return parts.contains("codex-hook") || parts.contains("claude-code-hook")
     }
 
     private static func hookGroup(agent: Agent, event: String, timeout: Int) -> [String: Any] {

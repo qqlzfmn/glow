@@ -2,20 +2,24 @@ import AppKit
 import Combine
 
 /// Manages the NSStatusItem (menu bar icon) and its menu.
-final class StatusBarController {
+final class StatusBarController: NSObject {
     private let statusItem: NSStatusItem
     private let poller: SessionPoller
     private var pollerCancellable: AnyCancellable?
     private var flashTimer: Timer?
 
+    private weak var usageMonitor: UsageMonitor?
+    private var usageBadgeText: String = ""
     private var panel: DetailPanelWindow?
     private var signalStartedAt: TimeInterval = 0
     private var isFlashing: Bool = false
     private var currentSignal: String = "idle"
 
-    init(poller: SessionPoller) {
+    init(poller: SessionPoller, usageMonitor: UsageMonitor?) {
         self.poller = poller
+        self.usageMonitor = usageMonitor
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        super.init()
 
         setupMenu()
         updateIcon(aggregateSignal: "idle", isFlashOn: true)
@@ -35,6 +39,13 @@ final class StatusBarController {
         let detailsItem = NSMenuItem(title: "Show Details", action: #selector(togglePanel), keyEquivalent: "d")
         detailsItem.target = self
         menu.addItem(detailsItem)
+
+        // Usage submenu — contents rebuilt on every open (NSMenuDelegate).
+        let usageMenu = NSMenu(title: "Usage")
+        let usageItem = NSMenuItem(title: "Usage", action: nil, keyEquivalent: "")
+        usageItem.submenu = usageMenu
+        menu.addItem(usageItem)
+        usageMenu.delegate = self
 
         menu.addItem(NSMenuItem.separator())
 
@@ -150,7 +161,7 @@ final class StatusBarController {
         image.isTemplate = false
 
         statusItem.button?.image = image
-        statusItem.button?.title = ""
+        statusItem.button?.title = usageBadgeText
     }
 
     private func colorForSignal(_ signal: String) -> NSColor {
@@ -192,6 +203,7 @@ final class StatusBarController {
             isRepeating: def?.isRepeating ?? false,
             flashColor: SIGNAL_DEFINITIONS[state.aggregateSignal]?.color.colorKey ?? "grey"
         )
+        panel?.updateUsage(Self.usageSummaryText())
         panel?.showPanel()
     }
 
@@ -290,5 +302,39 @@ final class StatusBarController {
         alert.alertStyle = .informational
         alert.addButton(withTitle: "OK")
         alert.runModal()
+    }
+}
+
+// MARK: - Usage
+
+extension StatusBarController: NSMenuDelegate {
+    /// Rebuild the Usage submenu on every open so provider rows always
+    /// reflect the latest usage.json snapshot.
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        guard menu.title == "Usage", let usageMonitor else { return }
+        menu.removeAllItems()
+        for item in usageMonitor.menuItems() {
+            menu.addItem(item)
+        }
+    }
+}
+
+extension StatusBarController {
+    /// Re-read usage.json and refresh the badge text next to the lamp icon.
+    func updateUsageBadge() {
+        usageBadgeText = UsageBadge.badgeText(for: UsageStore.readUsage())
+        updateIcon(aggregateSignal: currentSignal, isFlashOn: isFlashing)
+    }
+}
+
+extension StatusBarController {
+    /// Multi-line usage summary for the detail panel, one provider per line.
+    static func usageSummaryText() -> String {
+        let usage = UsageStore.readUsage()
+        let keys = usage.order ?? usage.providers.keys.sorted()
+        let lines = keys.compactMap { key -> String? in
+            usage.providers[key].map { UsageMonitor.menuTitle(for: $0) }
+        }
+        return lines.joined(separator: "\n")
     }
 }

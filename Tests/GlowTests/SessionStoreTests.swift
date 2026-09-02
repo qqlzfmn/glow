@@ -10,6 +10,7 @@ final class SessionStoreTests {
     private let tmpDir: String
 
     init() {
+        StateDirEnvLock.lock.lock()
         let dir = NSTemporaryDirectory() + "/glow-tests-\(UUID().uuidString)"
         try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
         self.tmpDir = dir
@@ -19,7 +20,9 @@ final class SessionStoreTests {
     deinit {
         unsetenv("GLOW_STATE_DIR")
         try? FileManager.default.removeItem(atPath: tmpDir)
+        StateDirEnvLock.lock.unlock()
     }
+
 
     // MARK: - Helpers
 

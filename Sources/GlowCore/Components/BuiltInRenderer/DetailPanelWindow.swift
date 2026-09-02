@@ -6,6 +6,7 @@ final class DetailPanelWindow: NSPanel {
     private let signalLabel: NSTextField
     private let summaryLabel: NSTextField
     private let sessionLabel: NSTextField
+    private let usageLabel: NSTextField
 
     private var displayLink: CVDisplayLink?
     private var signalStartedAt: TimeInterval = 0
@@ -45,6 +46,15 @@ final class DetailPanelWindow: NSPanel {
         sessionLabel.isEditable = false
         sessionLabel.isSelectable = false
 
+
+        usageLabel = NSTextField(labelWithString: "")
+        usageLabel.font = NSFont.systemFont(ofSize: 10)
+        usageLabel.textColor = NSColor(red: 0x77/255, green: 0x77/255, blue: 0x77/255, alpha: 1)
+        usageLabel.backgroundColor = .clear
+        usageLabel.isBezeled = false
+        usageLabel.isEditable = false
+        usageLabel.isSelectable = false
+        usageLabel.maximumNumberOfLines = 8
         super.init(
             contentRect: contentRect,
             styleMask: styleMask,
@@ -79,6 +89,12 @@ final class DetailPanelWindow: NSPanel {
         signalLabel.stringValue = name.replacingOccurrences(of: "_", with: " ").capitalized
         summaryLabel.stringValue = summary
         sessionLabel.stringValue = "Active sessions: \(sessionCount)"
+    }
+
+    /// Refresh the provider usage section (multi-line summary text).
+    func updateUsage(_ text: String) {
+        usageLabel.stringValue = text
+        usageLabel.isHidden = text.isEmpty
     }
 
     func showPanel() {
@@ -118,11 +134,13 @@ final class DetailPanelWindow: NSPanel {
         signalLabel.translatesAutoresizingMaskIntoConstraints = false
         summaryLabel.translatesAutoresizingMaskIntoConstraints = false
         sessionLabel.translatesAutoresizingMaskIntoConstraints = false
+        usageLabel.translatesAutoresizingMaskIntoConstraints = false
 
         contentView.addSubview(trafficLightView)
         contentView.addSubview(signalLabel)
         contentView.addSubview(summaryLabel)
         contentView.addSubview(sessionLabel)
+        contentView.addSubview(usageLabel)
 
         NSLayoutConstraint.activate([
             trafficLightView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 30),
@@ -141,7 +159,11 @@ final class DetailPanelWindow: NSPanel {
             sessionLabel.topAnchor.constraint(equalTo: summaryLabel.bottomAnchor, constant: 12),
             sessionLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             sessionLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            sessionLabel.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -16),
+
+            usageLabel.topAnchor.constraint(equalTo: sessionLabel.bottomAnchor, constant: 12),
+            usageLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            usageLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            usageLabel.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -16),
         ])
     }
 
@@ -149,7 +171,7 @@ final class DetailPanelWindow: NSPanel {
         guard let screen = NSScreen.main else { return }
         let screenFrame = screen.visibleFrame
         let panelWidth: CGFloat = 260
-        let panelHeight: CGFloat = 340
+        let panelHeight: CGFloat = 380
         let x = screenFrame.maxX - panelWidth - 20
         let y = screenFrame.maxY - panelHeight - 32
         setFrame(NSRect(x: x, y: y, width: panelWidth, height: panelHeight), display: true)

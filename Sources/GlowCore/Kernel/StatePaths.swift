@@ -16,6 +16,10 @@ enum StatePaths {
         (stateDir as NSString).appendingPathComponent("state.lock")
     }
 
+    static var usageFile: String {
+        (stateDir as NSString).appendingPathComponent("usage.json")
+    }
+
     static var logFile: String {
         (stateDir as NSString).appendingPathComponent("app.log")
     }

@@ -86,9 +86,17 @@ Sources/GlowCore/
     │   ├── InstallHooksCLI.swift        # install-hooks / uninstall-hooks CLI（共享参数解析）
     │   ├── CLIDispatch.swift            # 单二进制双模式：子命令分发，无子命令则启动 GUI
     │   └── SessionPoller.swift          # 500ms Combine 轮询 sessions.json（Combine 定时器）
+    ├── UsageMonitor/               # Producer：provider 用量监控（M2）
+    │   ├── UsageMonitor.swift          # 组件宿主：轮询 + 落盘 + 菜单贡献（实现 GlowComponent/MenuContributor）
+    │   ├── UsageCredentials.swift      # 凭据发现（claude env / opencode auth / 显式配置）
+    │   ├── UsageHTTP.swift             # JSON GET 小封装 + UsageParseError
+    │   ├── UsageBadge.swift            # badge/菜单文本格式化
+    │   ├── CodingPlanProviders.swift   # GLM/Kimi/MiniMax/ZenMux/OpenCode Go 配额
+    │   ├── BalanceProviders.swift      # DeepSeek/OpenRouter/SiliconFlow/StepFun 余额
+    │   └── OfficialUsageProviders.swift# Anthropic/OpenAI 官方 usage API
     └── BuiltInRenderer/           # Renderer：菜单栏 + 详情面板
-        ├── StatusBarController.swift    # NSStatusItem 灯色图标 + 闪烁动画 + 右键菜单
-        ├── DetailPanelWindow.swift      # 浮动 NSPanel 详情窗
+        ├── StatusBarController.swift    # NSStatusItem 灯色图标 + badge 文本 + 闪烁动画 + 右键菜单
+        ├── DetailPanelWindow.swift      # 浮动 NSPanel 详情窗（含 Usage 区块）
         └── TrafficLightView.swift       # 自绘红/黄/绿三色交通灯 NSView
 ```
 
@@ -244,47 +252,91 @@ blocked（红） > permission（黄） > attention / done（黄） > thinking / 
   message（install 后的 message 为 `installed` / `install failed: …`，
   uninstall 后为 `uninstalled` / `not installed`）。
 
-## 4. 协议预告（M2 落地，接口可能微调）
+## 4. 组件协议（M2 落地于 `Kernel/GlowComponent.swift`）
 
-M2 引入 UsageMonitor 时将把 M1 的隐式约定固化为以下协议草案：
+M2 随 UsageMonitor 落地了组件协议。当前所有组件同处 `GlowCore` target，
+协议为 internal；未来拆分插件 target 时再转 public。以 `Kernel/` 内最终代码为准：
 
 ```swift
-/// 所有组件的基协议：由 Kernel 注册并管理生命周期。
-protocol GlowComponent {
-    /// 组件唯一标识（用于总线订阅与日志）。
+/// 基协议：由宿主（AppDelegate）装配并驱动生命周期。
+protocol GlowComponent: AnyObject {
+    /// 组件唯一标识（日志与菜单接线用）。
     var id: String { get }
-    /// Kernel 装配完成后调用；组件在此启动轮询/监听。
-    func start(context: GlowContext)
+    /// 装配完成后调用一次；组件在此启动轮询/监听。
+    func start()
     /// 退出前调用；组件在此释放资源。
     func stop()
 }
 
-/// Producer：能产生 (sessionKey, signal) 事件的组件。
-/// 禁止碰 UI；通过 handler 上报而不是直写 sessions.json。
-protocol SignalProducer: GlowComponent {
-    /// Kernel 注入：(sessionKey, signal) 事件回调（即事件总线的入口）。
-    var signalHandler: ((String, String) -> Void)? { get set }
+/// Usage Producer：生产 provider 用量快照。
+/// 禁碰 UI、禁直写状态文件——只 fetch 并上报，由持有方落盘。
+protocol UsageProducer: AnyObject {
+    /// 稳定 provider key，同时是 usage.json 字典键（如 `glm`）。
+    var providerKey: String { get }
+    /// 菜单/面板显示名。
+    var displayName: String { get }
+    /// 拉取当前用量条目。网络/凭据/响应变形一律 throw。
+    func fetch() async throws -> [UsageItem]
 }
 
-/// Renderer 可选能力 1：向状态栏菜单贡献菜单项。
-protocol MenuContributor: GlowComponent {
-    /// 返回该组件在右键菜单中的菜单项（含子菜单）；Kernel 拼接时加分隔线。
+/// 菜单贡献能力：向菜单栏右键菜单追加菜单项。
+protocol MenuContributor: AnyObject {
+    /// 宿主负责在前后加分隔线。
     func menuItems() -> [NSMenuItem]
-}
-
-/// Renderer 可选能力 2：向详情面板贡献区块视图。
-protocol PanelContributor: GlowComponent {
-    /// 返回该组件在详情面板中的区块视图（自上而下拼接）。
-    func panelView() -> NSView
 }
 ```
 
-- `GlowContext` 预计携带：`StatePaths` 派生路径、`SignalSemantics` 只读查询、
-  总线订阅句柄。
-- AgentMonitor 将改造成 `SignalProducer + MenuContributor`（现有 Install/Uninstall
-  菜单迁移到 `menuItems()`），BuiltInRenderer 保持 Renderer 角色。
-- ⚠️ 以上签名是草案，M2 随 UsageMonitor 落地时可能微调，以 `Kernel/` 内最终
-  代码为准。
+- `SignalProducer`（产生 `(sessionKey, signal)` 事件的 agent 事件类组件）
+  与 `PanelContributor`（详情面板区块视图）仍为草案，待后续组件落地时淬炼。
+- UsageMonitor 是第一个实现 `GlowComponent + MenuContributor` 的组件；
+  `UsageProducer` 的实现是各 provider 类（`GLMUsageProvider` 等）。
+
+### usage.json 契约
+
+```json
+{
+  "order": ["glm", "deepseek"],
+  "providers": {
+    "<providerKey>": {
+      "display_name": "GLM Coding Plan",
+      "updated_at": 1730000000.123,
+      "status": "ok",
+      "error": null,
+      "items": [
+        { "label": "5h window", "used_percent": 42.5, "remaining": null,
+          "total": null, "unit": null, "resets_at": "2026-09-02T14:00:00Z" }
+      ]
+    }
+  }
+}
+```
+
+- 路径：`StatePaths.usageFile`（`$GLOW_STATE_DIR/usage.json`，默认 `/private/tmp/glow`）；
+- 写入走 `StateFileLock`（与 sessions.json 共用 `state.lock`）互斥；
+- 读取容忍文件缺失/损坏（损坏时 trace 到 stderr，视为空）；
+- `order` 决定 badge 与菜单的 provider 优先级（缺省时按键名排序）；
+- `status == "error"` 时 `error` 携带可读原因，`items` 保留上次成功值；
+- `items[0]` 是该 provider 的 badge 候选；`used_percent` 0-100 已用口径。
+
+### 凭据发现（`UsageConfig`）
+
+三路来源，后者覆盖前者（按 providerKey 去重）：
+1. `~/.claude/settings.json` 的 `env` 块：`ANTHROPIC_BASE_URL` +
+   `ANTHROPIC_AUTH_TOKEN`，按域名识别 coding-plan 平台
+   （bigmodel.cn / api.z.ai → GLM，api.kimi.com/coding → Kimi，
+   api.minimaxi.com → MiniMax，zenmux → ZenMux，opencode.ai/zen/go → OpenCode Go，
+   api.anthropic.com → Anthropic 官方；未知中转忽略）；
+2. `~/.local/share/opencode/auth.json`（当前识别 `zhipuai-coding-plan`）；
+3. 显式配置 `~/.config/glow/usage.json`：
+   `{"providers": [{"type": "glm", "token": "...", "base_url": "..."}]}`，
+   type 取值：glm / kimi / minimax / zenmux / opencode-go / deepseek /
+   openrouter / siliconflow / stepfun / anthropic / openai。
+
+轮询间隔 `GLOW_USAGE_POLL_SECONDS`（默认 300，下限 10）。Anthropic/OpenAI
+官方 usage API 需要组织 admin key，普通 key 会得到 401/403——错误原样显示在
+菜单里，不做特判。
+
+CLI 子命令 `usage` 打印 usage.json 全文（JSON）。
 
 ## 5. 开发路线（M2 后本指南补齐）
 

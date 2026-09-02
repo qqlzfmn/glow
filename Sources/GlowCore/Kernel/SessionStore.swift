@@ -126,39 +126,13 @@ enum SessionStore {
 
     private static func withLock<T>(_ body: () throws -> T) throws -> T {
         do {
-            try FileManager.default.createDirectory(
-                atPath: stateDir, withIntermediateDirectories: true
-            )
-        } catch {
-            throw SessionStoreError.writeFailed("cannot create state dir \(stateDir): \(error)")
+            return try StateFileLock.withLock(stateDir: stateDir, lockFile: lockFile, body)
+        } catch let error as StateLockError {
+            switch error {
+            case .lockUnavailable(let message):
+                throw SessionStoreError.lockUnavailable(message)
+            }
         }
-
-        // Open or create the lock file.
-        if !FileManager.default.fileExists(atPath: lockFile) {
-            FileManager.default.createFile(atPath: lockFile, contents: nil)
-        }
-
-        guard let fd = fopen(lockFile, "a+") else {
-            throw SessionStoreError.lockUnavailable(
-                "cannot open lock file \(lockFile): \(String(cString: strerror(errno)))"
-            )
-        }
-        defer { fclose(fd) }
-
-        flock(fileno(fd), LOCK_EX)
-        defer { flock(fileno(fd), LOCK_UN) }
-
-        return try body()
     }
 }
 
-// MARK: - POSIX flock import
-
-#if os(macOS)
-import Darwin
-#else
-import Glibc
-#endif
-
-private let LOCK_EX: Int32 = 2
-private let LOCK_UN: Int32 = 8

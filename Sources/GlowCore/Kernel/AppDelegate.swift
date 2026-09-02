@@ -2,6 +2,7 @@ import AppKit
 
 public final class AppDelegate: NSObject, NSApplicationDelegate {
     private var poller: SessionPoller?
+    private var usageMonitor: UsageMonitor?
     private var statusBarController: StatusBarController?
 
     public override init() {}
@@ -20,11 +21,21 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         let poller = SessionPoller()
         self.poller = poller
 
-        statusBarController = StatusBarController(poller: poller)
+        // Usage monitor: discovered providers only; without credentials it
+        // stays inert (badge absent, menu shows just "Refresh Usage").
+        let usageMonitor = UsageMonitor()
+        self.usageMonitor = usageMonitor
+
+        statusBarController = StatusBarController(poller: poller, usageMonitor: usageMonitor)
+        usageMonitor.onUsageUpdated = { [weak statusBarController] in
+            statusBarController?.updateUsageBadge()
+        }
+        usageMonitor.start()
         poller.start()
     }
 
     public func applicationWillTerminate(_ notification: Notification) {
         poller?.stop()
+        usageMonitor?.stop()
     }
 }

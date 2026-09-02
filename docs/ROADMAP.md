@@ -22,22 +22,32 @@ Glow 是 AI 编程助手的菜单栏环境状态面板，从"agent 状态灯"演
 - CI：push 时跑 `swift test`，保证主干可构建可测试。
 - `uninstall-hooks` 子命令：对称地移除/回滚已安装的 hook 与扩展模板。
 
-### M2 — provider-usage（立项中）
+### M2 — provider-usage（实施中）
 
-目标：在菜单栏同时展示"agent 在做什么"与"模型服务还剩多少"。初步设想采用组件化架构，沿用状态灯侧已验证的"数据与展示分离"思路：
+目标：在菜单栏同时展示"agent 在做什么"与"模型服务还剩多少"。组件化架构，
+数据与展示分离：
 
-- **Producer** 插件：负责从各类来源采集原始用量数据（API usage 端点、本地网关/代理统计、hook 侧 token 计数汇总等），输出统一的用量事件流。
-- **Processor** 插件：对事件流做归一化、聚合与配额计算（token/金额/重置周期口径），产出可渲染的用量快照。
-- **Renderer** 插件：把快照渲染到菜单栏（图标分区、子菜单、详情面板），与状态灯渲染共存。
-
-插件间通过定义良好的数据契约交互，新增 provider 只需实现 Producer；展示形态演进只动 Renderer。
+- **组件协议**（已落地）：`GlowComponent` + `UsageProducer` + `MenuContributor`
+  （`Kernel/GlowComponent.swift`），随 UsageMonitor 淬炼成文。
+- **Producer**（已落地 11 个 provider）：GLM/Z.ai Coding Plan、Kimi For Coding、
+  MiniMax、ZenMux、OpenCode Go（配额窗口）；DeepSeek、OpenRouter、SiliconFlow、
+  StepFun（余额）；Anthropic、OpenAI 官方 usage API（需组织 admin key）。
+  凭据三路自动发现（claude env 块 / opencode auth.json / 显式
+  `~/.config/glow/usage.json`），详见 docs/PLUGINS.md。
+- **契约**（已落地）：`usage.json`（`StatePaths.usageFile`，flock 互斥，
+  `order` 定优先级），CLI `usage` 子命令打印快照。
+- **Renderer**（已落地）：菜单栏 badge 文本（首个可用 provider 首条 item）、
+  Usage 子菜单、详情面板 Usage 区块。
+- 后续批次（按优先级）：new-api / one-api 网关统计 → 火山方舟（AK/SK 签名）→
+  智谱团队版（`?type=2`）→ 本地会话日志 token 统计（Claude JSONL / Codex
+  rollout / opencode，参照 cc-switch `session_usage_*.rs` 口径）→ Session Stats 面板。
 
 ## 待定项（后续细化）
 
-- provider 用量数据来源：API 余额端点（如 Anthropic/OpenAI usage API）、本地网关/代理统计、hook 侧 token 计数汇总？
-- 展示形态：现有菜单栏图标扩展（分区域/子菜单）、详情面板扩展，还是独立状态项？
-- 支持的 provider 范围与用量口径（token、金额、配额、重置周期）。
-- 与现有 `sessions.json` 聚合/灯语体系的关系（独立信号还是并入聚合优先级）。
+- 用量数据与灯语体系的关系：当前独立（usage.json 与 sessions.json 分离，
+  badge 只加文本不换灯色）；是否引入"配额耗尽 → 黄灯"类联动待定。
+- 官方 API 的金额/成本口径（Anthropic cost report 端点是否纳入）。
+- 插件化拆分：组件协议转 public、拆独立 target 的时机。
 
 ## 备注
 

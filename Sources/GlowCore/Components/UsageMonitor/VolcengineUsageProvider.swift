@@ -13,7 +13,7 @@ import CryptoKit
 ///      kDate = HMAC(SK, date) (SK without `AWS4` prefix).
 final class VolcengineUsageProvider: UsageProducer {
     let providerKey = "volcengine"
-    let displayName = "Volcengine Ark"
+    var displayName: String { config.displayName }
     private let config: UsageProviderConfig
 
     private static let host = "open.volcengineapi.com"

@@ -246,11 +246,17 @@ final class ProviderSettingsWindowController: NSWindowController {
             fieldViews.append((key: prompt.key, field: field))
         }
 
-        let baseField = NSTextField()
-        baseField.placeholderString = "https://…"
-        baseField.stringValue = active?.baseURL ?? ""
-        stack.addArrangedSubview(makeFieldRow(label: "Base URL (optional)", field: baseField))
-        baseURLField = baseField
+        if kind.usesBaseURL {
+            let baseField = NSTextField()
+            // Show the full default endpoint so the user knows what an
+            // empty field means.
+            baseField.placeholderString = kind.defaultBaseURL ?? "https://…"
+            baseField.stringValue = active?.baseURL ?? ""
+            stack.addArrangedSubview(makeFieldRow(label: "Base URL (optional)", field: baseField))
+            baseURLField = baseField
+        } else {
+            baseURLField = nil
+        }
 
         // Display-unit override (extra["unit"]) only applies to balance
         // providers; plan providers show percentages. Free-form concat:

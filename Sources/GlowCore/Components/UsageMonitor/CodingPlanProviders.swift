@@ -59,7 +59,7 @@ private func extractResetTime(_ any: Any?) -> String? {
 
 final class GLMUsageProvider: UsageProducer {
     let providerKey = "glm"
-    let displayName = "GLM Coding Plan"
+    var displayName: String { config.displayName }
     private let config: UsageProviderConfig
 
     init(config: UsageProviderConfig) {
@@ -190,7 +190,7 @@ final class GLMUsageProvider: UsageProducer {
 /// `query_zhipu_team`). Parsed by `GLMUsageProvider.parse`.
 final class ZhipuTeamUsageProvider: UsageProducer {
     let providerKey = "zhipu-team"
-    let displayName = "GLM Team Plan"
+    var displayName: String { config.displayName }
     private let config: UsageProviderConfig
 
     init(config: UsageProviderConfig) {
@@ -222,7 +222,7 @@ final class ZhipuTeamUsageProvider: UsageProducer {
 
 final class KimiUsageProvider: UsageProducer {
     let providerKey = "kimi"
-    let displayName = "Kimi For Coding"
+    var displayName: String { config.displayName }
     private let config: UsageProviderConfig
 
     init(config: UsageProviderConfig) {
@@ -280,7 +280,7 @@ final class KimiUsageProvider: UsageProducer {
 
 final class MiniMaxUsageProvider: UsageProducer {
     let providerKey = "minimax"
-    let displayName = "MiniMax Coding Plan"
+    var displayName: String { config.displayName }
     private let config: UsageProviderConfig
 
     init(config: UsageProviderConfig) {
@@ -364,7 +364,7 @@ final class MiniMaxUsageProvider: UsageProducer {
 
 final class ZenMuxUsageProvider: UsageProducer {
     let providerKey = "zenmux"
-    let displayName = "ZenMux"
+    var displayName: String { config.displayName }
     private let config: UsageProviderConfig
 
     init(config: UsageProviderConfig) {
@@ -439,7 +439,7 @@ final class ZenMuxUsageProvider: UsageProducer {
 
 final class OpenCodeGoUsageProvider: UsageProducer {
     let providerKey = "opencode-go"
-    let displayName = "OpenCode Go"
+    var displayName: String { config.displayName }
     private let config: UsageProviderConfig
 
     init(config: UsageProviderConfig) {

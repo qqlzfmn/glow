@@ -36,7 +36,7 @@ final class UsageGatewayProviderTests {
         #expect(items[0].label == "Balance")
         #expect(items[0].remaining == 2.0)
         #expect(items[0].total == 3.0)
-        #expect(items[0].unit == "USD")
+        #expect(items[0].unit == "¥")  // pay-as-you-go defaults to CNY
         #expect(items[0].resetsAt == nil)
         #expect(items[0].usedPercent == nil)  // balance item, not a window
     }

@@ -71,6 +71,19 @@ final class UsageCredentialsTests {
         #expect(UsageConfig.discoverProviders(home: home).isEmpty)
     }
 
+    @Test func displayNameOverrideRoundTripsThroughDiscovery() {
+        // "name" in the config must win over the built-in display name —
+        // this is the whole point of the Display name field in the window.
+        let home = makeHome()
+        write(
+            home + "/.config/glow/usage.json",
+            #"{"providers":[{"type":"new-api","name":"DMXAPI","token":"t","base_url":"https://dmx.cn"}]}"#
+        )
+        let configs = UsageConfig.discoverProviders(home: home)
+        #expect(configs.count == 1)
+        #expect(configs[0].displayName == "DMXAPI")
+    }
+
     @Test func unknownExplicitTypeNotInFactory() {
         #expect(UsageConfig.explicitProvider(forType: "nope") == nil)
         #expect(UsageConfig.explicitProvider(forType: "OpenCode-Go")?.key == "opencode-go")

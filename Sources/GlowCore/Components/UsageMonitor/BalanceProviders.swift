@@ -33,7 +33,7 @@ private func asObject(_ any: Any?) -> [String: Any]? {
 /// and still returns the reported numbers.
 final class DeepSeekUsageProvider: UsageProducer {
     let providerKey = "deepseek"
-    let displayName = "DeepSeek"
+    var displayName: String { config.displayName }
     private let config: UsageProviderConfig
 
     init(config: UsageProviderConfig) {
@@ -80,7 +80,7 @@ final class DeepSeekUsageProvider: UsageProducer {
 /// usage gives the remaining balance; unit is always USD.
 final class OpenRouterUsageProvider: UsageProducer {
     let providerKey = "openrouter"
-    let displayName = "OpenRouter"
+    var displayName: String { config.displayName }
     private let config: UsageProviderConfig
 
     init(config: UsageProviderConfig) {
@@ -108,7 +108,7 @@ final class OpenRouterUsageProvider: UsageProducer {
                 usedPercent: nil,
                 remaining: credits - usage,
                 total: credits,
-                unit: "USD",
+                unit: "¥",
                 resetsAt: nil
             )
         ]
@@ -123,7 +123,7 @@ final class OpenRouterUsageProvider: UsageProducer {
 /// bills in CNY. The reported figure is `totalBalance`.
 final class SiliconFlowUsageProvider: UsageProducer {
     let providerKey = "siliconflow"
-    let displayName = "SiliconFlow"
+    var displayName: String { config.displayName }
     private let config: UsageProviderConfig
 
     init(config: UsageProviderConfig) {
@@ -173,7 +173,7 @@ final class SiliconFlowUsageProvider: UsageProducer {
 /// `balance` is the spendable account balance, always in CNY.
 final class StepFunUsageProvider: UsageProducer {
     let providerKey = "stepfun"
-    let displayName = "StepFun"
+    var displayName: String { config.displayName }
     private let config: UsageProviderConfig
 
     init(config: UsageProviderConfig) {

@@ -62,7 +62,7 @@ final class UsageBalanceProviderTests {
         #expect(items[0].label == "Balance")
         #expect(items[0].remaining == 5.75)
         #expect(items[0].total == 10.0)
-        #expect(items[0].unit == "USD")
+        #expect(items[0].unit == "¥")  // pay-as-you-go defaults to CNY
         #expect(items[0].usedPercent == nil)
     }
 

@@ -49,7 +49,7 @@ private enum OfficialUsage {
 /// ordinary workspace keys get a 401, which is surfaced as-is by `UsageHTTP`.
 final class AnthropicUsageProvider: UsageProducer {
     let providerKey = "anthropic"
-    let displayName = "Anthropic Usage"
+    var displayName: String { config.displayName }
 
     /// Current recommended API version per platform.claude.com docs.
     private static let apiVersion = "2023-06-01"
@@ -130,7 +130,7 @@ final class AnthropicUsageProvider: UsageProducer {
 /// organization admin/owner key; non-admin keys get a 403, surfaced as-is.
 final class OpenAIUsageProvider: UsageProducer {
     let providerKey = "openai"
-    let displayName = "OpenAI Usage"
+    var displayName: String { config.displayName }
 
     private let config: UsageProviderConfig
 

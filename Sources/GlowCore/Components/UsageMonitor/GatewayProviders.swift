@@ -40,7 +40,7 @@ private func asObject(_ any: Any?) -> [String: Any]? {
 /// (`$0.002 / 1K tokens`), i.e. 500000 units = $1.
 final class NewApiUsageProvider: UsageProducer {
     let providerKey = "new-api"
-    let displayName = "New API"
+    var displayName: String { config.displayName }
     private let config: UsageProviderConfig
 
     init(config: UsageProviderConfig) {
@@ -97,7 +97,7 @@ final class NewApiUsageProvider: UsageProducer {
                 usedPercent: nil,
                 remaining: remaining,
                 total: total,
-                unit: "USD",
+                unit: "¥",
                 resetsAt: nil
             )
         ]

@@ -24,7 +24,7 @@ final class StatusItemBadgeView: NSView {
     private let segmentPadding: CGFloat = 2   // content inset inside a cell
     private let valueFont = NSFont.systemFont(ofSize: 11, weight: .regular)
     private let labelFont = NSFont.systemFont(ofSize: 7.5)
-    private let separatorColor = NSColor.labelColor.withAlphaComponent(0.18)
+    private let separatorColor = NSColor.labelColor.withAlphaComponent(0.30)
 
     override var intrinsicContentSize: NSSize {
         NSSize(width: ceil(fittingWidth()), height: super.intrinsicContentSize.height)
@@ -62,7 +62,9 @@ final class StatusItemBadgeView: NSView {
         ).fill()
         x += lampDiameter + lampGap
 
-        for (index, segment) in segments.enumerated() {
+        for segment in segments {
+            // One leading hairline per segment — never a trailing one, or
+            // consecutive segments render a double bar.
             drawHairline(at: x, midY: midY)
             x += 1 + hairlineGap
 
@@ -81,12 +83,6 @@ final class StatusItemBadgeView: NSView {
                 withAttributes: [.font: labelFont, .foregroundColor: NSColor.secondaryLabelColor]
             )
             x += cellWidth + segmentPadding * 2
-
-            // Hairline only between segments — none after the last one.
-            if index < segments.count - 1 {
-                drawHairline(at: x, midY: midY)
-                x += 1 + hairlineGap
-            }
         }
     }
 

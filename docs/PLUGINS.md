@@ -52,6 +52,13 @@ flowchart LR
 | **Renderer** | 消费信号渲染界面（菜单栏图标、badge、菜单项） | **禁止产生事件**；禁止直写 sessions.json |
 | **Kernel** | 事件总线、`SignalSemantics` 聚合仲裁、`StatePaths` 文件契约、组件生命周期（注册/启动/停止） | 不含业务语义，只做分发与仲裁 |
 
+### 工程约定
+
+- **错误必须显式处理**：写/锁失败一律 throw；CLI 打印 `glow: <error>` 到
+  stderr 并以退出码 1 结束，GUI 弹 alert。读取失败容忍（视为空状态）但
+  必须 trace 到 stderr——禁止静默丢数据。
+- **无隐式启用**：usage provider 只来自显式 0600 配置文件。
+
 ### Kernel 的四项职责
 
 1. **事件总线**：组件通过总线发布 `(sessionKey, signal)` 事件，Renderer 订阅聚合结果。

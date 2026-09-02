@@ -107,16 +107,19 @@ final class ProviderSettingsWindowController: NSWindowController {
         stack.alignment = .leading
         stack.spacing = 8
         stack.edgeInsets = NSEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
-        // Without these the stack collapses to zero width inside the scroll
-        // view and the whole detail pane renders blank.
+        // Attach to the hierarchy FIRST, then pin: activating cross-view
+        // constraints before `documentView` assignment throws
+        // "no common ancestor" and kills the action chain.
+        detailScroll.documentView = stack
         stack.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
+            // Pin the width or the stack collapses to zero inside the
+            // scroll view and the whole detail pane renders blank.
             stack.leadingAnchor.constraint(equalTo: detailScroll.contentView.leadingAnchor),
             stack.trailingAnchor.constraint(equalTo: detailScroll.contentView.trailingAnchor),
             stack.topAnchor.constraint(equalTo: detailScroll.contentView.topAnchor),
             stack.bottomAnchor.constraint(lessThanOrEqualTo: detailScroll.contentView.bottomAnchor),
         ])
-        detailScroll.documentView = stack
         detailStack = stack
 
         let refreshButton = NSButton(title: "Refresh Now", target: self, action: #selector(refreshClicked))

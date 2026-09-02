@@ -1,6 +1,10 @@
 # Glow
 
-> AI 编程助手的菜单栏环境状态面板——给 Agent 一盏看得见的状态灯。
+<p align="center">
+  <img src="assets/logo/Glow-transparent.png" width="220" alt="Glow logo">
+</p>
+
+<p align="center"><em>AI 编程助手的菜单栏环境状态面板——给 Agent 一盏看得见的状态灯。</em></p>
 
 Glow 把 macOS 菜单栏变成 AI 编程助手的环境状态面板。Codex、Claude Code 或其他本地 Agent 开始工作、请求权限、遇到阻塞时，菜单栏图标会同步变化。在状态灯之外，菜单栏同时呈现模型 provider 的用量状态——配额窗口、余额、轮询节奏全部可配。
 

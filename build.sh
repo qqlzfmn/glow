@@ -25,6 +25,8 @@ cp "$BIN_PATH/Glow" "$APP_BUNDLE/Contents/MacOS/Glow"
 cp "$RESOURCES_DIR/Info.plist" "$APP_BUNDLE/Contents/Info.plist"
 # Copy omp/pi hook template
 cp "$RESOURCES_DIR/glow-hook-template.ts" "$APP_BUNDLE/Contents/Resources/"
+# App icon
+cp "$RESOURCES_DIR/AppIcon.icns" "$APP_BUNDLE/Contents/Resources/"
 
 echo "==> Built: $APP_BUNDLE"
 echo "==> Run:   open $APP_BUNDLE"

@@ -5,7 +5,9 @@
 <dict>
     <key>CFBundleName</key>
     <string>Glow</string>
-    <key>CFBundleDisplayName</key>
+    <key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+<key>CFBundleDisplayName</key>
     <string>Glow</string>
     <key>CFBundleIdentifier</key>
     <string>com.qqlzfmn.Glow</string>

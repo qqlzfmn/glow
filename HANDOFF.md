@@ -62,13 +62,12 @@ Producer（AgentMonitor 等，产生事件，禁碰 UI）
 ## 里程碑历史（main 分支）
 
 | Commit | 内容 |
-|---|---|
 | c33a534 | M0：bootstrap——从 vibecoding-signal-light 基线导入，全局改名 SignalLightApp→Glow，pi-coding-agent→pi，根 SPM 结构，LICENSE/README，64 测试 |
 | f2dff07 | fix: pre-push hook 转义修复 |
 | ac2c415 | CI：GitHub Actions（macos-15，test + release build） |
 | c82482d | M1：Kernel/Components 骨架 + uninstall-hooks（幂等可还原）+ PLUGINS.md 骨架版，74 测试 |
 | 84c4222 | docs: HANDOFF 交接文档 |
-| (M2a) | **Usage Monitor**：组件协议落地（GlowComponent/UsageProducer/MenuContributor）+ usage.json 契约（flock 共享 StateFileLock）+ 11 个 provider Producer（GLM/Kimi/MiniMax/ZenMux/OpenCodeGo 配额，DeepSeek/OpenRouter/SiliconFlow/StepFun 余额，Anthropic/OpenAI 官方 usage）+ 凭据三路自动发现 + 菜单栏 badge + Usage 菜单/详情面板区块 + `usage` CLI。端点口径源自 cc-switch `coding_plan.rs`/`balance.rs`（用户指定参考）与官方文档实证 |
+| f1035cb | M2a：**Usage Monitor**——组件协议落地（GlowComponent/UsageProducer/MenuContributor）+ usage.json 契约（flock 共享 StateFileLock）+ 11 个 provider Producer（GLM/Kimi/MiniMax/ZenMux/OpenCodeGo 配额，DeepSeek/OpenRouter/SiliconFlow/StepFun 余额，Anthropic/OpenAI 官方 usage）+ 凭据三路自动发现 + 菜单栏 badge + Usage 菜单/详情面板区块 + `usage` CLI，134 测试。端点口径源自 cc-switch `coding_plan.rs`/`balance.rs`（用户指定参考）与官方文档实证 |
 
 重构方法论（沿用即可）：每阶段 subagent 实现 → 主会话独立验收（swift test + smoke + grep 残留）→ 原子 commit → push。
 

@@ -40,7 +40,13 @@ struct UsageProviderConfig {
 /// file or entries are skipped with a stderr trace — absence of a provider
 /// is not an error.
 enum UsageConfig {
-    static func discoverProviders(home: String = NSHomeDirectory()) -> [UsageProviderConfig] {
+    /// Effective home: `GLOW_HOME` env override for tests/smoke, else the
+    /// user's home. Mirrors `HookInstaller.defaultHome`.
+    static var effectiveHome: String {
+        ProcessInfo.processInfo.environment["GLOW_HOME"] ?? NSHomeDirectory()
+    }
+
+    static func discoverProviders(home: String = UsageConfig.effectiveHome) -> [UsageProviderConfig] {
         discoverExplicitConfig(home: home)
     }
 

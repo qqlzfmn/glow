@@ -5,22 +5,22 @@ import Foundation
 /// Settings window, and the menu's "Configure Providers…" action. File
 /// permissions are tightened to 0600 since tokens are stored in plain JSON.
 enum UsageConfigStore {
-    static func configDir(home: String = NSHomeDirectory()) -> String {
+    static func configDir(home: String = UsageConfig.effectiveHome) -> String {
         (home as NSString).appendingPathComponent(".config/glow")
     }
 
-    static func configFile(home: String = NSHomeDirectory()) -> String {
+    static func configFile(home: String = UsageConfig.effectiveHome) -> String {
         (configDir(home: home) as NSString).appendingPathComponent("usage.json")
     }
 
     /// Load explicit provider entries (delegates to the discovery parser so
     /// both paths share one schema interpretation). Missing file → [].
-    static func load(home: String = NSHomeDirectory()) -> [UsageProviderConfig] {
+    static func load(home: String = UsageConfig.effectiveHome) -> [UsageProviderConfig] {
         UsageConfig.discoverExplicitConfig(home: home)
     }
 
     /// Persist the full provider list atomically with 0600 permissions.
-    static func save(_ configs: [UsageProviderConfig], home: String = NSHomeDirectory()) throws {
+    static func save(_ configs: [UsageProviderConfig], home: String = UsageConfig.effectiveHome) throws {
         let dir = configDir(home: home)
         try FileManager.default.createDirectory(
             atPath: dir, withIntermediateDirectories: true
@@ -52,14 +52,14 @@ enum UsageConfigStore {
     }
 
     /// Insert or replace one provider (matched by provider key).
-    static func upsert(_ config: UsageProviderConfig, home: String = NSHomeDirectory()) throws {
+    static func upsert(_ config: UsageProviderConfig, home: String = UsageConfig.effectiveHome) throws {
         var configs = load(home: home).filter { $0.providerKey != config.providerKey }
         configs.append(config)
         try save(configs, home: home)
     }
 
     /// Remove one provider; returns false when it was not configured.
-    static func remove(providerKey: String, home: String = NSHomeDirectory()) throws -> Bool {
+    static func remove(providerKey: String, home: String = UsageConfig.effectiveHome) throws -> Bool {
         let configs = load(home: home)
         guard configs.contains(where: { $0.providerKey == providerKey }) else {
             return false
@@ -69,7 +69,7 @@ enum UsageConfigStore {
     }
 
     /// Ensure the config file exists so editors open something meaningful.
-    static func ensureConfigFile(home: String = NSHomeDirectory()) -> String {
+    static func ensureConfigFile(home: String = UsageConfig.effectiveHome) -> String {
         if !FileManager.default.fileExists(atPath: configFile(home: home)) {
             try? save([], home: home)
         }

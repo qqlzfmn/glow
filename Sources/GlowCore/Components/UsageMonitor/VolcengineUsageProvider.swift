@@ -237,7 +237,7 @@ final class VolcengineUsageProvider: UsageProducer {
     /// means the window is not subscribed and is skipped (an empty result
     /// also triggers the Coding-Plan fallback in `fetch`).
     static func parseAFP(_ result: [String: Any]) -> [UsageItem] {
-        [( "AFPFiveHour", "5h"), ("AFPWeekly", "1w"), ("AFPMonthly", "1m")].compactMap { key, label in
+        [( "AFPFiveHour", "5 Hours"), ("AFPWeekly", "1 Week"), ("AFPMonthly", "1 Month")].compactMap { key, label in
             guard let window = result[key] as? [String: Any],
                   let quota = asDouble(window["Quota"]), quota > 0 else { return nil }
             let used = asDouble(window["Used"]) ?? 0.0
@@ -285,9 +285,9 @@ final class VolcengineUsageProvider: UsageProducer {
 
     private static func codingWindow(_ label: String) -> String? {
         switch label.lowercased() {
-        case "session", "5h", "fivehour", "five_hour", "rolling_5h": return "5h"
-        case "weekly", "week", "7d": return "1w"
-        case "monthly", "month": return "1m"
+        case "session", "5h", "fivehour", "five_hour", "rolling_5h": return "5 Hours"
+        case "weekly", "week", "7d": return "1 Week"
+        case "monthly", "month": return "1 Month"
         default: return nil
         }
     }

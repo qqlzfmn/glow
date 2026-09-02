@@ -51,16 +51,18 @@ enum UsageBadge {
         return parts.joined(separator: " ")
     }
 
-    /// Compact currency formatting: symbol form for CNY/USD, suffix form
-    /// otherwise; large values keep integers, small ones one decimal.
+    /// Currency rendering as free-form `{unit}{value}` concat — the unit
+    /// may be a symbol ("$", "€", "¥") or an ISO code ("CNY" → "¥"); any
+    /// other text is used verbatim as a prefix.
     static func currency(_ value: Double, unit: String?) -> String {
-        switch unit?.uppercased() {
-        case "CNY": return "¥" + amount(value)
-        case "USD": return "$" + amount(value)
-        default:
-            let u = unit ?? ""
-            return u.isEmpty ? amount(value) : amount(value) + " " + u
+        var u = unit ?? ""
+        switch u.uppercased() {
+        case "USD": u = "$"
+        case "CNY", "RMB": u = "¥"
+        case "EUR": u = "€"
+        default: break
         }
+        return u + amount(value)
     }
 
     private static func amount(_ value: Double) -> String {

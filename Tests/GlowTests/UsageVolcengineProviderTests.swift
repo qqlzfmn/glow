@@ -86,9 +86,9 @@ final class VolcengineUsageProviderTests {
         ]
         let items = VolcengineUsageProvider.parseAFP(result)
         #expect(items.count == 2)
-        #expect(items[0].label == "5h")
+        #expect(items[0].label == "5 Hours")
         #expect(items[0].usedPercent == 25.0)
-        #expect(items[1].label == "1m")
+        #expect(items[1].label == "1 Month")
         #expect(items[1].usedPercent == 25.0)
     }
 
@@ -104,7 +104,7 @@ final class VolcengineUsageProviderTests {
         """.utf8)) as? [String: Any] ?? [:]
         let result = body["Result"] as? [String: Any] ?? [:]
         let items = VolcengineUsageProvider.parseCodingPlan(result)
-        #expect(items.map { $0.label } == ["5h", "1w", "1m"])
+        #expect(items.map { $0.label } == ["5 Hours", "1 Week", "1 Month"])
         #expect(items.map { $0.usedPercent } == [12.0, 34.5, 56.0])
     }
 
@@ -144,7 +144,7 @@ final class ZhipuTeamUsageProviderTests {
         """.utf8)) as? [String: Any] ?? [:]
         let items = try GLMUsageProvider.parse(body)
         #expect(items.count == 1)
-        #expect(items[0].label == "5h")
+        #expect(items[0].label == "5 Hours")
         #expect(items[0].usedPercent == 18.0)
     }
 }

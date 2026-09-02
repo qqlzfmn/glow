@@ -252,13 +252,18 @@ final class ProviderSettingsWindowController: NSWindowController {
         stack.addArrangedSubview(makeFieldRow(label: "Base URL (optional)", field: baseField))
         baseURLField = baseField
 
-        // Display-unit override (extra["unit"]); label swap only, no
-        // conversion. Empty keeps the provider's default unit.
-        let unitField = NSTextField()
-        unitField.placeholderString = kind.type == "new-api" ? "USD" : "USD / CNY"
-        unitField.stringValue = active?.extra["unit"] ?? ""
-        stack.addArrangedSubview(makeFieldRow(label: "Unit (optional)", field: unitField))
-        unitOverrideField = unitField
+        // Display-unit override (extra["unit"]) only applies to balance
+        // providers; plan providers show percentages. Free-form concat:
+        // "$", "€", "¥", "CNY" all work.
+        if kind.balanceBased {
+            let unitField = NSTextField()
+            unitField.placeholderString = "$ / € / ¥ / CNY"
+            unitField.stringValue = active?.extra["unit"] ?? ""
+            stack.addArrangedSubview(makeFieldRow(label: "Unit (optional)", field: unitField))
+            unitOverrideField = unitField
+        } else {
+            unitOverrideField = nil
+        }
 
         let save = NSButton(title: "Save", target: self, action: #selector(saveClicked))
         save.bezelStyle = .rounded

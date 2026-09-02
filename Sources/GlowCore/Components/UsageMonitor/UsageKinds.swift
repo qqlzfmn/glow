@@ -11,12 +11,20 @@ struct UsageProviderKind {
     /// the rest land in `UsageProviderConfig.extra`. `secret` fields render
     /// as secure text in the GUI.
     let prompts: [(key: String, prompt: String, secret: Bool)]
+    /// Pay-as-you-go providers show a remaining balance (currency applies).
+    /// Plan providers show usage percentages — no currency setting.
+    let balanceBased: Bool
 
     /// Convenience for the common single-token providers.
-    static func tokenOnly(_ type: String, _ displayName: String, _ tokenPrompt: String) -> UsageProviderKind {
-        UsageProviderKind(type: type, displayName: displayName, prompts: [
-            ("token", tokenPrompt, true),
-        ])
+    static func tokenOnly(
+        _ type: String, _ displayName: String, _ tokenPrompt: String,
+        balanceBased: Bool = false
+    ) -> UsageProviderKind {
+        UsageProviderKind(
+            type: type, displayName: displayName,
+            prompts: [("token", tokenPrompt, true)],
+            balanceBased: balanceBased
+        )
     }
 }
 
@@ -28,29 +36,29 @@ enum UsageKinds {
             ("token", "API key", true),
             ("organization_id", "Organization ID", false),
             ("project_id", "Project ID", false),
-        ]),
+        ], balanceBased: false),
         UsageProviderKind(type: "volcengine", displayName: "Volcengine Ark", prompts: [
             ("access_key_id", "AccessKey ID", true),
             ("secret_access_key", "Secret Access Key", true),
-        ]),
+        ], balanceBased: false),
         .tokenOnly("kimi", "Kimi For Coding", "API token"),
         .tokenOnly("minimax", "MiniMax Coding Plan", "API token"),
         .tokenOnly("zenmux", "ZenMux", "API token"),
         .tokenOnly("opencode-go", "OpenCode Go", "API token"),
-        .tokenOnly("deepseek", "DeepSeek", "API key (sk-...)"),
-        .tokenOnly("openrouter", "OpenRouter", "API key (sk-or-...)"),
-        .tokenOnly("siliconflow", "SiliconFlow", "API token"),
-        .tokenOnly("stepfun", "StepFun", "API token"),
+        .tokenOnly("deepseek", "DeepSeek", "API key (sk-...)", balanceBased: true),
+        .tokenOnly("openrouter", "OpenRouter", "API key (sk-or-...)", balanceBased: true),
+        .tokenOnly("siliconflow", "SiliconFlow", "API token", balanceBased: true),
+        .tokenOnly("stepfun", "StepFun", "API token", balanceBased: true),
         UsageProviderKind(type: "anthropic", displayName: "Anthropic Usage", prompts: [
             ("token", "Admin API key (sk-ant-admin...; org admin required)", true),
-        ]),
+        ], balanceBased: false),
         UsageProviderKind(type: "openai", displayName: "OpenAI Usage", prompts: [
             ("token", "Organization admin/owner key", true),
-        ]),
+        ], balanceBased: false),
         UsageProviderKind(type: "new-api", displayName: "New API gateway", prompts: [
             ("token", "System access token", true),
             ("user_id", "User ID (new-api requires the New-Api-User header)", false),
-        ]),
+        ], balanceBased: true),
     ]
 
     static func kind(forType type: String) -> UsageProviderKind? {

@@ -47,7 +47,7 @@ final class UsageMonitorTests {
 
     @Test func pollOnceWritesOkAndErrorStates() async throws {
         let ok = MockProducer(key: "glm", name: "GLM", result: .success([
-            UsageItem(label: "5h", usedPercent: 12),
+            UsageItem(label: "5 Hours", usedPercent: 12),
         ]))
         let failing = MockProducer(key: "deepseek", name: "DeepSeek", result: .failure(
             UsageHTTPError.httpStatus(401, "auth error")
@@ -67,7 +67,7 @@ final class UsageMonitorTests {
 
     @Test func errorKeepsStaleItemsFromPreviousSuccess() async throws {
         let ok = MockProducer(key: "glm", name: "GLM", result: .success([
-            UsageItem(label: "5h", usedPercent: 30),
+            UsageItem(label: "5 Hours", usedPercent: 30),
         ]))
         let monitor = UsageMonitor(producers: [ok], pollInterval: 9999)
         await monitor.pollOnce()
@@ -82,14 +82,14 @@ final class UsageMonitorTests {
 
     @Test func menuItemsListProvidersAndRefresh() async throws {
         let ok = MockProducer(key: "glm", name: "GLM Coding Plan", result: .success([
-            UsageItem(label: "5h", usedPercent: 42),
+            UsageItem(label: "5 Hours", usedPercent: 42),
         ]))
         let monitor = UsageMonitor(producers: [ok], pollInterval: 9999)
         await monitor.pollOnce()
 
         let items = monitor.menuItems()
         let titles = items.compactMap { $0.title.isEmpty ? nil : $0.title }
-        #expect(titles == ["GLM Coding Plan", "5h 42%", "Refresh Usage"])
+        #expect(titles == ["GLM Coding Plan", "5 Hours 42%", "Refresh Usage"])
         #expect(items.first?.isEnabled == true)   // header row pins the badge
         #expect(items.first?.state == .on)        // sole provider is auto-pinned
         #expect(items[1].indentationLevel == 1)
@@ -97,7 +97,7 @@ final class UsageMonitorTests {
 
     @Test func selectBadgeProviderWritesContract() async throws {
         let glm = MockProducer(key: "glm", name: "GLM Coding Plan", result: .success([
-            UsageItem(label: "5h", usedPercent: 10),
+            UsageItem(label: "5 Hours", usedPercent: 10),
         ]))
         let ds = MockProducer(key: "deepseek", name: "DeepSeek", result: .success([
             UsageItem(label: "Balance", remaining: 9, unit: "USD"),
@@ -121,15 +121,15 @@ final class UsageMonitorTests {
 
     @Test func menuItemsRenderEveryItemOfAProvider() async throws {
         let ok = MockProducer(key: "glm", name: "GLM Coding Plan", result: .success([
-            UsageItem(label: "5h", usedPercent: 42),
-            UsageItem(label: "1w", usedPercent: 7),
-            UsageItem(label: "1m", usedPercent: 0),
+            UsageItem(label: "5 Hours", usedPercent: 42),
+            UsageItem(label: "1 Week", usedPercent: 7),
+            UsageItem(label: "1 Month", usedPercent: 0),
         ]))
         let monitor = UsageMonitor(producers: [ok], pollInterval: 9999)
         await monitor.pollOnce()
 
         let titles = monitor.menuItems().compactMap { $0.title.isEmpty ? nil : $0.title }
-        #expect(titles == ["GLM Coding Plan", "5h 42%", "1w 7%", "1m 0%", "Refresh Usage"])
+        #expect(titles == ["GLM Coding Plan", "5 Hours 42%", "1 Week 7%", "1 Month 0%", "Refresh Usage"])
     }
 
     @Test func emptyProducerListStillWritesEmptySnapshot() async throws {

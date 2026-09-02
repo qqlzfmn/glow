@@ -11,18 +11,22 @@ final class UsageMonitor: GlowComponent, MenuContributor {
     private let injectedProducers: [any UsageProducer]?
     /// Live producer set, refreshed from discovery on every poll.
     private var producers: [any UsageProducer] = []
-    private let pollInterval: TimeInterval
+    /// Test override for the poll cadence; nil = resolve dynamically.
+    private let pollIntervalOverride: TimeInterval?
     private var pollTask: Task<Void, Never>?
 
     /// Called on the main queue after usage.json has been (re)written.
     var onUsageUpdated: (() -> Void)?
 
-    /// Default poll cadence. Quota windows move slowly; 300s is plenty and
-    /// keeps well under provider rate limits.
-    static var defaultPollInterval: TimeInterval {
+    /// Poll cadence, resolved fresh on every cycle: env var wins (tests),
+    /// then the settings window's value in usage.json, then 300s.
+    static func effectivePollInterval() -> TimeInterval {
         if let raw = ProcessInfo.processInfo.environment["GLOW_USAGE_POLL_SECONDS"],
            let value = TimeInterval(raw), value >= 10 {
             return value
+        }
+        if let seconds = UsageStore.readUsage().pollSeconds, seconds >= 10 {
+            return TimeInterval(seconds)
         }
         return 300
     }
@@ -33,11 +37,11 @@ final class UsageMonitor: GlowComponent, MenuContributor {
     init(producers: [any UsageProducer]? = nil, pollInterval: TimeInterval? = nil) {
         injectedProducers = producers
         self.producers = producers ?? Self.discover()
-        self.pollInterval = pollInterval ?? Self.defaultPollInterval
+        pollIntervalOverride = pollInterval
     }
 
-    /// Resolve the producer set: credential-backed providers from all
-    /// discovery sources.
+    /// Resolve the producer set: credential-backed providers from the
+    /// explicit config.
     static func discover() -> [any UsageProducer] {
         UsageConfig.discoverProviders().compactMap { UsageProducerFactory.make($0) }
     }
@@ -48,7 +52,7 @@ final class UsageMonitor: GlowComponent, MenuContributor {
             while !Task.isCancelled {
                 guard let self else { break }
                 await pollOnce()
-                let interval = pollInterval
+                let interval = pollIntervalOverride ?? Self.effectivePollInterval()
                 try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
             }
         }
@@ -59,13 +63,12 @@ final class UsageMonitor: GlowComponent, MenuContributor {
         pollTask = nil
     }
 
-
     /// Fetch every producer serially and persist one merged snapshot.
-    /// Producer failures are recorded per provider (status=error) — never
-    /// silent; stale items are kept so menus degrade gracefully.
+    /// Re-discovery happens here (not just in the sleep loop) so Refresh
+    /// Now and settings-window saves take effect immediately. Producer
+    /// failures are recorded per provider (status=error) — never silent;
+    /// stale items are kept so menus degrade gracefully.
     func pollOnce() async {
-        // Re-discover here, not just in the sleep loop, so Refresh Now and
-        // a settings-window save take effect immediately.
         if injectedProducers == nil {
             producers = Self.discover()
         }
@@ -94,8 +97,8 @@ final class UsageMonitor: GlowComponent, MenuContributor {
         }
         let order = producers.map { $0.providerKey }
         file.order = order
-        // Drop providers that are no longer discovered (e.g. credentials
-        // removed via usage-config) instead of leaving stale entries.
+        // Drop providers that are no longer configured instead of leaving
+        // stale entries behind.
         file.providers = providers.filter { order.contains($0.key) }
         do {
             try UsageStore.writeUsage(file)
@@ -118,8 +121,8 @@ final class UsageMonitor: GlowComponent, MenuContributor {
                 continue
             }
             // Section header doubles as the badge selector: click to pin
-            // this provider's first item to the menu bar badge. Checkmark
-            // marks the currently pinned one.
+            // this provider to the menu bar badge. Checkmark marks the
+            // currently pinned one.
             let header = Self.actionItem(
                 provider.displayName,
                 action: #selector(selectBadgeProvider(_:)),
@@ -149,8 +152,6 @@ final class UsageMonitor: GlowComponent, MenuContributor {
         Task { await pollOnce() }
     }
 
-    // MARK: - Helpers
-
     /// Pin (or re-pin) the badge to the clicked provider. Clicking the
     /// already-pinned provider unpins it, returning to automatic order.
     @objc func selectBadgeProvider(_ sender: NSMenuItem) {
@@ -172,7 +173,6 @@ final class UsageMonitor: GlowComponent, MenuContributor {
         item.isEnabled = false
         return item
     }
-
 
     private static func actionItem(_ title: String, action: Selector, target: AnyObject?) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: "")

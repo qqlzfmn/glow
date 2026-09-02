@@ -62,7 +62,7 @@ final class NewApiUsageProvider: UsageProducer {
             headers["New-Api-User"] = userId
         }
         let response = try await UsageHTTP.getJSON("\(base)/api/user/self", headers: headers)
-        return try Self.parse(response.body)
+        return config.applyUnitOverride(try Self.parse(response.body))
     }
 
     /// Pure parsing, fixture-testable. Unknown shape must throw rather than
@@ -85,16 +85,16 @@ final class NewApiUsageProvider: UsageProducer {
         }
         let usedQuota = parseF64(data, "used_quota") ?? 0
 
-        // Internal units → USD: QuotaPerUnit = 500000.
+        // Internal units → USD: QuotaPerUnit = 500000. The gateway quota IS
+        // the remaining balance (cc-switch displays it the same way), so the
+        // item shows the balance, not a usage percentage.
         let remaining = quota / 500_000
         let total = (quota + usedQuota) / 500_000
-        // Used share is only computable once the account has a quota at all.
-        let usedPercent = total > 0 ? (usedQuota / (quota + usedQuota)) * 100 : nil
 
         return [
             UsageItem(
                 label: "Balance",
-                usedPercent: usedPercent,
+                usedPercent: nil,
                 remaining: remaining,
                 total: total,
                 unit: "USD",

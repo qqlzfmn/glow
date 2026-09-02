@@ -38,7 +38,7 @@ final class UsageGatewayProviderTests {
         #expect(items[0].total == 3.0)
         #expect(items[0].unit == "USD")
         #expect(items[0].resetsAt == nil)
-        #expect(abs(items[0].usedPercent! - 100.0 / 3.0) < 1e-9)
+        #expect(items[0].usedPercent == nil)  // balance item, not a window
     }
 
     @Test func zeroQuotaYieldsNilUsedPercent() throws {
@@ -61,14 +61,14 @@ final class UsageGatewayProviderTests {
         let items = try NewApiUsageProvider.parse(stringNumbers)
         #expect(items[0].remaining == 123456.0 / 500_000)
         #expect(items[0].total == 173456.0 / 500_000)
-        #expect(items[0].usedPercent! == 50000.0 / 173456.0 * 100)
+        #expect(items[0].usedPercent == nil)
 
         // Fresh accounts may omit `used_quota` entirely.
         let noUsedQuota = try json(["success": true, "data": ["quota": 250_000]])
         let fresh = try NewApiUsageProvider.parse(noUsedQuota)
         #expect(fresh[0].remaining == 0.5)
         #expect(fresh[0].total == 0.5)
-        #expect(fresh[0].usedPercent == 0)
+        #expect(fresh[0].usedPercent == nil)
     }
 
     // MARK: - Rejected shapes

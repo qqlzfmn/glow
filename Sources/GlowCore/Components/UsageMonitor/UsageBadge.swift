@@ -2,9 +2,9 @@ import Foundation
 
 /// Formats usage numbers for the menu bar badge and menus.
 enum UsageBadge {
-    /// Menu bar badge text: the pinned provider (`badge_provider`) if it has
-    /// data, else the first provider (in `order`) that does. Empty when
-    /// nothing is usable.
+    /// Menu bar badge: the pinned provider's (`badge_provider`) items joined
+    /// with a vertical bar (e.g. `5h 62%│1w 84%│1m 62%`), else the first
+    /// provider (in `order`) with data. Empty when nothing is usable.
     static func badgeText(for file: UsageFile) -> String {
         let keys = file.order ?? file.providers.keys.sorted()
         var candidates = keys
@@ -14,14 +14,13 @@ enum UsageBadge {
         for key in candidates {
             guard let provider = file.providers[key],
                   provider.status == "ok",
-                  let item = provider.items.first else {
+                  !provider.items.isEmpty else {
                 continue
             }
-            return itemText(item)
+            return provider.items.map { itemText($0) }.joined(separator: "│")
         }
         return ""
     }
-
     /// One-line text for an item: `5h 42%`, `1w 12.3M`, or `Balance ¥123.45`.
     static func itemText(_ item: UsageItem) -> String {
         var parts: [String] = [item.label]

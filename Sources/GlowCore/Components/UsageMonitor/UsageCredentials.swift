@@ -115,3 +115,17 @@ enum UsageConfig {
         }
     }
 }
+
+extension UsageProviderConfig {
+    /// Display-unit override from `extra["unit"]` (e.g. a gateway that
+    /// bills in CNY despite the default USD label). Values are NOT
+    /// converted — this only swaps the unit label.
+    func applyUnitOverride(_ items: [UsageItem]) -> [UsageItem] {
+        guard let unit = extra["unit"], !unit.isEmpty else { return items }
+        return items.map { item in
+            var item = item
+            item.unit = unit
+            return item
+        }
+    }
+}

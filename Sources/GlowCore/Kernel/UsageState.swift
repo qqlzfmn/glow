@@ -10,12 +10,16 @@ struct UsageFile: Codable {
     /// Provider key the user pinned for the menu bar badge; nil means
     /// "first available in order". Persisted via the Usage menu.
     var badgeProvider: String?
+    /// Poll cadence override in seconds (settings window); the env var
+    /// `GLOW_USAGE_POLL_SECONDS` still wins. nil = default 300.
+    var pollSeconds: Int?
     /// Keyed by stable provider key (e.g. `glm`, `deepseek`).
     var providers: [String: ProviderUsage]
 
     enum CodingKeys: String, CodingKey {
         case order
         case badgeProvider = "badge_provider"
+        case pollSeconds = "poll_seconds"
         case providers
     }
 }
@@ -65,4 +69,3 @@ struct UsageItem: Codable {
         case resetsAt = "resets_at"
     }
 }
-

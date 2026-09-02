@@ -45,7 +45,7 @@ final class DeepSeekUsageProvider: UsageProducer {
             "https://api.deepseek.com/user/balance",
             headers: ["Authorization": "Bearer \(config.token)"]
         )
-        return try Self.parse(response.body)
+        return config.applyUnitOverride(try Self.parse(response.body))
     }
 
     /// Pure parsing, fixture-testable. Unknown shape must throw rather than
@@ -62,7 +62,7 @@ final class DeepSeekUsageProvider: UsageProducer {
                 throw UsageParseError.unexpectedShape("deepseek: missing total_balance")
             }
             return UsageItem(
-                label: currency ?? "Balance",
+                label: "Balance",
                 usedPercent: nil,
                 remaining: total,
                 total: nil,
@@ -92,7 +92,7 @@ final class OpenRouterUsageProvider: UsageProducer {
             "https://openrouter.ai/api/v1/credits",
             headers: ["Authorization": "Bearer \(config.token)"]
         )
-        return try Self.parse(response.body)
+        return config.applyUnitOverride(try Self.parse(response.body))
     }
 
     static func parse(_ body: Any) throws -> [UsageItem] {
@@ -185,7 +185,7 @@ final class StepFunUsageProvider: UsageProducer {
             "https://api.stepfun.com/v1/accounts",
             headers: ["Authorization": "Bearer \(config.token)"]
         )
-        return try Self.parse(response.body)
+        return config.applyUnitOverride(try Self.parse(response.body))
     }
 
     static func parse(_ body: Any) throws -> [UsageItem] {

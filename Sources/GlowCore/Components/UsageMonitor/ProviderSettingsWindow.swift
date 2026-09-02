@@ -50,6 +50,7 @@ final class ProviderSettingsWindowController: NSWindowController {
     /// Live handles of the form fields of the currently displayed detail.
     private var fieldViews: [(key: String, field: NSTextField)] = []
     private var baseURLField: NSTextField?
+    private var pollMinutesField: NSTextField?
     /// Optional display-name override field of the current detail form.
     private var displayNameField: NSTextField?
 
@@ -124,13 +125,21 @@ final class ProviderSettingsWindowController: NSWindowController {
         ])
         detailStack = stack
 
+        let pollLabel = makeLabel("Auto refresh (min)", color: .secondaryLabelColor)
+        pollMinutesField = NSTextField()
+        pollMinutesField?.frame = NSRect(x: 0, y: 0, width: 40, height: 22)
+        pollMinutesField?.target = self
+        pollMinutesField?.action = #selector(pollMinutesChanged)
         let refreshButton = NSButton(title: "Refresh Now", target: self, action: #selector(refreshClicked))
         refreshButton.bezelStyle = .rounded
         let closeButton = NSButton(title: "Close", target: self, action: #selector(closeClicked))
         closeButton.bezelStyle = .rounded
-        let buttonRow = NSStackView(views: [refreshButton, closeButton])
+        let pollGroup = NSStackView(views: [pollLabel, pollMinutesField!])
+        pollGroup.orientation = .horizontal
+        pollGroup.spacing = 6
+        let buttonRow = NSStackView(views: [pollGroup, refreshButton, closeButton])
         buttonRow.orientation = .horizontal
-        buttonRow.spacing = 8
+        buttonRow.spacing = 12
 
         for view in [listScrollView, detailScroll] {
             view.translatesAutoresizingMaskIntoConstraints = false
@@ -156,6 +165,10 @@ final class ProviderSettingsWindowController: NSWindowController {
             buttonRow.trailingAnchor.constraint(lessThanOrEqualTo: content.trailingAnchor, constant: -12),
             buttonRow.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -12),
         ])
+
+        pollMinutesField?.stringValue = String(
+            Int((UsageMonitor.effectivePollInterval() / 60.0).rounded())
+        )
     }
 
     // MARK: - Data loading
@@ -315,7 +328,11 @@ final class ProviderSettingsWindowController: NSWindowController {
             return
         }
         onRefresh()
-        reload()
+        // The triggered poll lands within a couple of seconds; refresh the
+        // Current line (and badges) once it has landed.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+            self?.reload()
+        }
     }
 
     @objc private func removeClicked() {
@@ -335,6 +352,26 @@ final class ProviderSettingsWindowController: NSWindowController {
         }
         onRefresh()
         reload()
+    }
+
+    /// Persist the auto-refresh interval (minutes → seconds). Applied on the
+    /// next poll cycle — the loop resolves the interval fresh each round.
+    @objc private func pollMinutesChanged() {
+        guard let text = pollMinutesField?.stringValue.trimmingCharacters(in: .whitespaces),
+              let minutes = Int(text), minutes >= 1 else {
+            // Invalid input: snap the field back to the effective value.
+            pollMinutesField?.stringValue = String(
+                Int((UsageMonitor.effectivePollInterval() / 60.0).rounded())
+            )
+            return
+        }
+        var file = UsageStore.readUsage()
+        file.pollSeconds = minutes * 60
+        do {
+            try UsageStore.writeUsage(file)
+        } catch {
+            presentError(message: "Cannot update \(UsageConfigStore.configFile()): \(error)")
+        }
     }
 
     @objc private func refreshClicked() {

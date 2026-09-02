@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import AppKit
 @testable import GlowCore
 
 /// UsageMonitor merges producer results into usage.json; failures are
@@ -89,8 +90,33 @@ final class UsageMonitorTests {
         let items = monitor.menuItems()
         let titles = items.compactMap { $0.title.isEmpty ? nil : $0.title }
         #expect(titles == ["GLM Coding Plan", "5h 42%", "Refresh Usage"])
-        #expect(items.first?.isEnabled == false)
+        #expect(items.first?.isEnabled == true)   // header row pins the badge
+        #expect(items.first?.state == .on)        // sole provider is auto-pinned
         #expect(items[1].indentationLevel == 1)
+    }
+
+    @Test func selectBadgeProviderWritesContract() async throws {
+        let glm = MockProducer(key: "glm", name: "GLM Coding Plan", result: .success([
+            UsageItem(label: "5h", usedPercent: 10),
+        ]))
+        let ds = MockProducer(key: "deepseek", name: "DeepSeek", result: .success([
+            UsageItem(label: "Balance", remaining: 9, unit: "USD"),
+        ]))
+        let monitor = UsageMonitor(producers: [glm, ds], pollInterval: 9999)
+        await monitor.pollOnce()
+
+        let item = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        item.representedObject = "deepseek"
+        monitor.selectBadgeProvider(item)
+
+        let usage = UsageStore.readUsage()
+        #expect(usage.badgeProvider == "deepseek")
+        // Badge prefers the pinned provider even though glm sorts first.
+        #expect(UsageBadge.badgeText(for: usage) == "Balance $9.0")
+
+        // Clicking the pinned provider again unpins it.
+        monitor.selectBadgeProvider(item)
+        #expect(UsageStore.readUsage().badgeProvider == nil)
     }
 
     @Test func menuItemsRenderEveryItemOfAProvider() async throws {

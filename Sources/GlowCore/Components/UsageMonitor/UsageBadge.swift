@@ -2,11 +2,16 @@ import Foundation
 
 /// Formats usage numbers for the menu bar badge and menus.
 enum UsageBadge {
-    /// Menu bar badge text: the first provider (in `order`) that has data.
-    /// Empty string when nothing is usable.
+    /// Menu bar badge text: the pinned provider (`badge_provider`) if it has
+    /// data, else the first provider (in `order`) that does. Empty when
+    /// nothing is usable.
     static func badgeText(for file: UsageFile) -> String {
         let keys = file.order ?? file.providers.keys.sorted()
-        for key in keys {
+        var candidates = keys
+        if let pinned = file.badgeProvider {
+            candidates = [pinned] + keys.filter { $0 != pinned }
+        }
+        for key in candidates {
             guard let provider = file.providers[key],
                   provider.status == "ok",
                   let item = provider.items.first else {

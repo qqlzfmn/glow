@@ -50,6 +50,8 @@ final class ProviderSettingsWindowController: NSWindowController {
     /// Live handles of the form fields of the currently displayed detail.
     private var fieldViews: [(key: String, field: NSTextField)] = []
     private var baseURLField: NSTextField?
+    /// Optional display-name override field of the current detail form.
+    private var displayNameField: NSTextField?
 
     init(onRefresh: @escaping () -> Void) {
         self.onRefresh = onRefresh
@@ -207,6 +209,14 @@ final class ProviderSettingsWindowController: NSWindowController {
         stack.addArrangedSubview(makeSeparator())
 
         let active = row.activeConfig
+
+        // Optional display-name override (e.g. call "New API" "DMXAPI").
+        let nameField = NSTextField()
+        nameField.placeholderString = kind.displayName
+        nameField.stringValue = active?.displayName ?? kind.displayName
+        stack.addArrangedSubview(makeFieldRow(label: "Display name (optional)", field: nameField))
+        displayNameField = nameField
+
         for prompt in kind.prompts {
             let field = prompt.secret ? NSSecureTextField() : NSTextField()
             field.placeholderString = prompt.prompt
@@ -220,7 +230,7 @@ final class ProviderSettingsWindowController: NSWindowController {
         }
 
         let baseField = NSTextField()
-        baseField.placeholderString = "https://… (leave empty for default endpoint)"
+        baseField.placeholderString = "https://…"
         baseField.stringValue = active?.baseURL ?? ""
         stack.addArrangedSubview(makeFieldRow(label: "Base URL (optional)", field: baseField))
         baseURLField = baseField
@@ -285,9 +295,15 @@ final class ProviderSettingsWindowController: NSWindowController {
             baseURL = base
         }
 
+        // Empty display-name field keeps the built-in name.
+        var displayName = displayNameField?.stringValue.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if displayName.isEmpty {
+            displayName = row.kind.displayName
+        }
+
         let config = UsageProviderConfig(
             providerKey: row.kind.type,
-            displayName: row.kind.displayName,
+            displayName: displayName,
             baseURL: baseURL,
             token: token,
             extra: extra

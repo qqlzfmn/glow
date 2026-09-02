@@ -7,8 +7,17 @@ struct UsageFile: Codable {
     /// Provider keys in display/badge priority order (discovery order).
     /// Optional so hand-written or older files still decode.
     var order: [String]?
+    /// Provider key the user pinned for the menu bar badge; nil means
+    /// "first available in order". Persisted via the Usage menu.
+    var badgeProvider: String?
     /// Keyed by stable provider key (e.g. `glm`, `deepseek`).
     var providers: [String: ProviderUsage]
+
+    enum CodingKeys: String, CodingKey {
+        case order
+        case badgeProvider = "badge_provider"
+        case providers
+    }
 }
 
 /// Latest snapshot for one provider. `status == "error"` carries `error`

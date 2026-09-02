@@ -67,13 +67,18 @@ enum UsageConfig {
                 continue
             }
             // Everything beyond the well-known keys is a provider-specific
-            // credential (organization_id, project_id, access_key_id, ...).
+            // credential (organization_id, project_id, access_key_id, ...);
+            // "name" overrides the built-in display name (e.g. call
+            // "New API" "DMXAPI").
             let extra = entry.filter { key, _ in
-                !["type", "token", "base_url"].contains(key)
+                !["type", "token", "base_url", "name"].contains(key)
             }.compactMapValues { $0 as? String }
+            let displayName = (entry["name"] as? String).flatMap {
+                $0.isEmpty ? nil : $0
+            } ?? name
             configs.append(UsageProviderConfig(
                 providerKey: key,
-                displayName: name,
+                displayName: displayName,
                 baseURL: entry["base_url"] as? String,
                 token: token,
                 extra: extra

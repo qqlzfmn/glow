@@ -29,6 +29,7 @@ enum UsageConfigStore {
         for config in configs {
             var entry: [String: Any] = [
                 "type": config.providerKey,
+                "name": config.displayName,
                 "token": config.token,
             ]
             if let baseURL = config.baseURL {

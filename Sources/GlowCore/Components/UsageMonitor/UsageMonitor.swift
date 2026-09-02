@@ -47,11 +47,6 @@ final class UsageMonitor: GlowComponent, MenuContributor {
         pollTask = Task { [weak self] in
             while !Task.isCancelled {
                 guard let self else { break }
-                // Re-discover every cycle so usage-config edits and agent
-                // credential changes apply live, without an app restart.
-                if injectedProducers == nil {
-                    producers = Self.discover()
-                }
                 await pollOnce()
                 let interval = pollInterval
                 try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
@@ -64,10 +59,16 @@ final class UsageMonitor: GlowComponent, MenuContributor {
         pollTask = nil
     }
 
+
     /// Fetch every producer serially and persist one merged snapshot.
     /// Producer failures are recorded per provider (status=error) — never
     /// silent; stale items are kept so menus degrade gracefully.
     func pollOnce() async {
+        // Re-discover here, not just in the sleep loop, so Refresh Now and
+        // a settings-window save take effect immediately.
+        if injectedProducers == nil {
+            producers = Self.discover()
+        }
         var file = UsageStore.readUsage()
         var providers = file.providers
         for producer in producers {
@@ -109,14 +110,24 @@ final class UsageMonitor: GlowComponent, MenuContributor {
     func menuItems() -> [NSMenuItem] {
         var items: [NSMenuItem] = []
         let usage = UsageStore.readUsage()
+        let pinned = usage.badgeProvider ?? usage.order?.first
         for key in usage.order ?? usage.providers.keys.sorted() {
             guard let provider = usage.providers[key] else { continue }
             if provider.status == "error", let error = provider.error {
                 items.append(Self.disabledItem("\(provider.displayName) — \(error)"))
                 continue
             }
-            // Section header, then one row per item (5h / 1w / 1m / balance).
-            items.append(Self.disabledItem(provider.displayName))
+            // Section header doubles as the badge selector: click to pin
+            // this provider's first item to the menu bar badge. Checkmark
+            // marks the currently pinned one.
+            let header = Self.actionItem(
+                provider.displayName,
+                action: #selector(selectBadgeProvider(_:)),
+                target: self
+            )
+            header.representedObject = key
+            header.state = (pinned == key) ? .on : .off
+            items.append(header)
             for item in provider.items {
                 let row = Self.disabledItem(UsageBadge.itemText(item))
                 row.indentationLevel = 1
@@ -140,11 +151,28 @@ final class UsageMonitor: GlowComponent, MenuContributor {
 
     // MARK: - Helpers
 
+    /// Pin (or re-pin) the badge to the clicked provider. Clicking the
+    /// already-pinned provider unpins it, returning to automatic order.
+    @objc func selectBadgeProvider(_ sender: NSMenuItem) {
+        guard let key = sender.representedObject as? String else { return }
+        var file = UsageStore.readUsage()
+        file.badgeProvider = (file.badgeProvider == key) ? nil : key
+        do {
+            try UsageStore.writeUsage(file)
+        } catch {
+            fputs("glow: cannot write usage.json: \(error)\n", stderr)
+        }
+        onUsageUpdated?()
+    }
+
+    // MARK: - Helpers
+
     private static func disabledItem(_ title: String) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
         item.isEnabled = false
         return item
     }
+
 
     private static func actionItem(_ title: String, action: Selector, target: AnyObject?) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: "")

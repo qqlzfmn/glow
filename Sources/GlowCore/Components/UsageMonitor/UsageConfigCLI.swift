@@ -82,6 +82,15 @@ enum UsageConfigCLI {
 
         var extra: [String: String] = [:]
         var token = ""
+        var displayName = ""
+        if let name = prompt("Display name (optional, Enter for \"\(kind.displayName)\"): "),
+           !name.isEmpty {
+            displayName = name
+        }
+        var baseURL: String?
+        if let base = prompt("Base URL (optional, Enter to skip): "), !base.isEmpty {
+            baseURL = base
+        }
         for (index, field) in kind.prompts.enumerated() {
             guard let value = prompt("\(field.prompt): "), !value.isEmpty else {
                 print("Aborted.")
@@ -93,18 +102,15 @@ enum UsageConfigCLI {
                 extra[field.key] = value
             }
         }
-        var baseURL: String?
-        if let base = prompt("Base URL (optional, Enter to skip): "), !base.isEmpty {
-            baseURL = base
-        }
 
         let config = UsageProviderConfig(
             providerKey: kind.type,
-            displayName: kind.displayName,
+            displayName: displayName.isEmpty ? kind.displayName : displayName,
             baseURL: baseURL,
             token: token,
             extra: extra
         )
+
         do {
             try UsageConfigStore.upsert(config)
         } catch {

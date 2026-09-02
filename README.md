@@ -47,7 +47,7 @@ Glow 给 Agent 一个在菜单栏里的可见存在：
 ## 快速开始
 
 ```bash
-./build.sh                                # 构建 macOS 菜单栏应用（仓库根 SwiftPM 包）
+./scripts/build.sh                       # 构建 macOS 菜单栏应用（仓库根 SwiftPM 包）
 open .build/Glow.app                      # 启动
 ```
 
@@ -168,7 +168,7 @@ echo '{"event":"Notification","session_id":"demo"}' | $APP claude-code-hook
 git config core.hooksPath .githooks
 ```
 
-手动打包：`bash package.sh`
+手动打包：`bash scripts/package.sh`
 
 ## 多会话行为
 

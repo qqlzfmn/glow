@@ -40,7 +40,7 @@ if [ "$changed" -eq 0 ]; then
 fi
 
 echo "==> pre-push: rebuilding package..."
-bash "$REPO_ROOT/package.sh"
+bash "$REPO_ROOT/scripts/package.sh"
 
 # Checksum
 shasum -a 256 "$PKG" | awk '{print $1}' > "$PKG.sha256"

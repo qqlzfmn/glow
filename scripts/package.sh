@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ── Paths ──────────────────────────────────────────────────────────────────
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BUILD_DIR="$SCRIPT_DIR/.build"
 APP_BUNDLE="$BUILD_DIR/Glow.app"
 PKG_ROOT="$BUILD_DIR/pkg-root"
@@ -10,7 +10,7 @@ PKG_COMPONENT="$BUILD_DIR/Glow-component.pkg"
 PKG_FINAL="$BUILD_DIR/Glow.pkg"
 
 echo "==> Step 1: Building app..."
-bash "$SCRIPT_DIR/build.sh"
+bash "$SCRIPT_DIR/scripts/build.sh"
 
 echo ""
 echo "==> Step 2: Preparing package root..."

@@ -11,32 +11,27 @@ final class ProviderSettingsWindowController: NSWindowController {
     struct RowState {
         let kind: UsageProviderKind
         let explicit: UsageProviderConfig?
-        let autoDiscovered: UsageProviderConfig?
         let snapshot: ProviderUsage?
 
-        enum State { case configured, auto, notConfigured }
+        enum State { case configured, notConfigured }
 
         var state: State {
-            if explicit != nil { return .configured }
-            if autoDiscovered != nil { return .auto }
-            return .notConfigured
+            explicit != nil ? .configured : .notConfigured
         }
 
-        /// The values the form is pre-filled with: explicit wins over auto.
-        var activeConfig: UsageProviderConfig? { explicit ?? autoDiscovered }
+        /// The values the form is pre-filled with.
+        var activeConfig: UsageProviderConfig? { explicit }
 
         /// Pure resolver, fixture-testable.
         static func resolve(
             kinds: [UsageProviderKind],
             explicit: [UsageProviderConfig],
-            autoDiscovered: [UsageProviderConfig],
             snapshots: [String: ProviderUsage]
         ) -> [RowState] {
             kinds.map { kind in
                 RowState(
                     kind: kind,
                     explicit: explicit.first { $0.providerKey == kind.type },
-                    autoDiscovered: autoDiscovered.first { $0.providerKey == kind.type },
                     snapshot: snapshots[kind.type]
                 )
             }
@@ -112,6 +107,15 @@ final class ProviderSettingsWindowController: NSWindowController {
         stack.alignment = .leading
         stack.spacing = 8
         stack.edgeInsets = NSEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
+        // Without these the stack collapses to zero width inside the scroll
+        // view and the whole detail pane renders blank.
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: detailScroll.contentView.leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: detailScroll.contentView.trailingAnchor),
+            stack.topAnchor.constraint(equalTo: detailScroll.contentView.topAnchor),
+            stack.bottomAnchor.constraint(lessThanOrEqualTo: detailScroll.contentView.bottomAnchor),
+        ])
         detailScroll.documentView = stack
         detailStack = stack
 
@@ -155,7 +159,6 @@ final class ProviderSettingsWindowController: NSWindowController {
         rows = RowState.resolve(
             kinds: UsageKinds.all,
             explicit: UsageConfigStore.load(),
-            autoDiscovered: UsageConfig.discoverProviders(),
             snapshots: UsageStore.readUsage().providers
         )
         if selectedIndex >= rows.count { selectedIndex = 0 }
@@ -186,13 +189,6 @@ final class ProviderSettingsWindowController: NSWindowController {
         case .configured:
             stack.addArrangedSubview(
                 makeLabel("Configured in \(UsageConfigStore.configFile())", color: .secondaryLabelColor)
-            )
-        case .auto:
-            stack.addArrangedSubview(
-                makeLabel(
-                    "Auto-discovered from your agent config. Saving stores it in the explicit config.",
-                    color: .secondaryLabelColor
-                )
             )
         case .notConfigured:
             stack.addArrangedSubview(makeLabel("Not configured yet.", color: .secondaryLabelColor))
@@ -366,9 +362,6 @@ extension ProviderSettingsWindowController: NSTableViewDelegate, NSTableViewData
         case .configured:
             stateText = "configured"
             stateColor = .systemGreen
-        case .auto:
-            stateText = "auto"
-            stateColor = .systemBlue
         case .notConfigured:
             stateText = "—"
             stateColor = .tertiaryLabelColor

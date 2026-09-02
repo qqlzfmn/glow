@@ -1,7 +1,6 @@
 import Foundation
 
-/// Credentials for one usage provider, resolved from auto-discovery or the
-/// explicit config file.
+/// Credentials for one usage provider, taken from the explicit config file.
 struct UsageProviderConfig {
     /// Stable provider key == `usage.json` key == producer `providerKey`.
     var providerKey: String
@@ -13,7 +12,7 @@ struct UsageProviderConfig {
     var token: String
     /// Provider-specific additional credentials: `organization_id` /
     /// `project_id` (GLM team), `access_key_id` / `secret_access_key`
-    /// (Volcengine), etc.
+    /// (Volcengine), `user_id` (new-api), etc.
     var extra: [String: String]
 
     init(
@@ -31,93 +30,21 @@ struct UsageProviderConfig {
     }
 }
 
-/// Resolves which usage providers to poll and with which credentials.
+/// Resolves which usage providers to poll. Per user decision, **nothing is
+/// auto-enabled**: the only source is the explicit config file
+/// `~/.config/glow/usage.json`
+/// (`{"providers": [{"type": "glm", "token": "...", "base_url": "..."}]}`),
+/// edited via the Provider Settings window or `usage-config`.
 ///
-/// Sources, later wins on duplicate provider key:
-/// 1. `~/.claude/settings.json` `env` block — `ANTHROPIC_BASE_URL` /
-///    `ANTHROPIC_AUTH_TOKEN` identify the coding-plan host the user already
-///    runs agents against (GLM, Kimi, MiniMax, ZenMux, OpenCode Go, Anthropic).
-/// 2. `~/.local/share/opencode/auth.json` — per-provider credential entries.
-/// 3. `~/.config/glow/usage.json` — explicit Glow config, always wins:
-///    `{"providers": [{"type": "glm", "token": "...", "base_url": "..."}]}`.
-///
-/// Tokens never leave this process except in Authorization headers; config
-/// files are read-only here. Missing sources are skipped silently — absence
-/// of a provider is not an error.
+/// Tokens never leave this process except in Authorization headers. Missing
+/// file or entries are skipped with a stderr trace — absence of a provider
+/// is not an error.
 enum UsageConfig {
     static func discoverProviders(home: String = NSHomeDirectory()) -> [UsageProviderConfig] {
-        var byKey: [String: UsageProviderConfig] = [:]
-        var order: [String] = []
-
-        func merge(_ config: UsageProviderConfig) {
-            if byKey[config.providerKey] == nil {
-                order.append(config.providerKey)
-            }
-            byKey[config.providerKey] = config
-        }
-
-        if let claude = discoverClaudeEnv(home: home) {
-            merge(claude)
-        }
-        for config in discoverOpenCode(home: home) {
-            merge(config)
-        }
-        for config in discoverExplicitConfig(home: home) {
-            merge(config)
-        }
-
-        return order.compactMap { byKey[$0] }
+        discoverExplicitConfig(home: home)
     }
 
-    // MARK: - Source 1: ~/.claude/settings.json env block
-
-    static func discoverClaudeEnv(home: String) -> UsageProviderConfig? {
-        let path = (home as NSString).appendingPathComponent(".claude/settings.json")
-        guard let data = FileManager.default.contents(atPath: path),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let env = json["env"] as? [String: Any] else {
-            return nil
-        }
-        guard let base = env["ANTHROPIC_BASE_URL"] as? String, !base.isEmpty,
-              let token = env["ANTHROPIC_AUTH_TOKEN"] as? String, !token.isEmpty else {
-            return nil
-        }
-        guard let plan = planProvider(forBaseURL: base) else {
-            // Unknown relay host: no quota API we can talk to; not an error.
-            return nil
-        }
-        return UsageProviderConfig(
-            providerKey: plan.key,
-            displayName: plan.name,
-            baseURL: base,
-            token: token
-        )
-    }
-
-    // MARK: - Source 2: ~/.local/share/opencode/auth.json
-
-    static func discoverOpenCode(home: String) -> [UsageProviderConfig] {
-        let path = (home as NSString)
-            .appendingPathComponent(".local/share/opencode/auth.json")
-        guard let data = FileManager.default.contents(atPath: path),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            return []
-        }
-        var configs: [UsageProviderConfig] = []
-        // Only provider ids with a known usage API are recognized.
-        if let entry = json["zhipuai-coding-plan"] as? [String: Any],
-           let key = entry["key"] as? String, !key.isEmpty {
-            configs.append(UsageProviderConfig(
-                providerKey: "glm",
-                displayName: "GLM Coding Plan",
-                baseURL: "https://open.bigmodel.cn",
-                token: key
-            ))
-        }
-        return configs
-    }
-
-    // MARK: - Source 3: ~/.config/glow/usage.json
+    // MARK: - Explicit config parsing
 
     static func discoverExplicitConfig(home: String) -> [UsageProviderConfig] {
         let path = (home as NSString).appendingPathComponent(".config/glow/usage.json")
@@ -157,36 +84,6 @@ enum UsageConfig {
 
     // MARK: - Provider identification
 
-    /// Map a coding endpoint base URL to its plan quota provider, mirroring
-    /// cc-switch's `detect_provider` (same host families, same caveats).
-    static func planProvider(forBaseURL url: String) -> (key: String, name: String)? {
-        let lowered = url.lowercased()
-        if lowered.contains("api.kimi.com/coding") {
-            return ("kimi", "Kimi For Coding")
-        }
-        if lowered.contains("bigmodel.cn") {
-            return ("glm", "GLM Coding Plan")
-        }
-        if lowered.contains("api.z.ai") {
-            return ("glm", "GLM Coding Plan")
-        }
-        if lowered.contains("api.minimaxi.com") || lowered.contains("api.minimax.io") {
-            return ("minimax", "MiniMax Coding Plan")
-        }
-        if lowered.contains("zenmux") {
-            return ("zenmux", "ZenMux")
-        }
-        if lowered.contains("opencode.ai/zen/go") {
-            // Zen pay-as-you-go (`/zen/v1`) deliberately does not match: it
-            // has no usage API (verified 404 upstream).
-            return ("opencode-go", "OpenCode Go")
-        }
-        if lowered.contains("api.anthropic.com") {
-            return ("anthropic", "Anthropic Usage")
-        }
-        return nil
-    }
-
     static func explicitProvider(forType type: String) -> (key: String, name: String)? {
         switch type.lowercased() {
         case "glm": return ("glm", "GLM Coding Plan")
@@ -199,6 +96,7 @@ enum UsageConfig {
         case "deepseek": return ("deepseek", "DeepSeek")
         case "openrouter": return ("openrouter", "OpenRouter")
         case "siliconflow": return ("siliconflow", "SiliconFlow")
+        case "stepfun": return ("stepfun", "StepFun")
         case "new-api", "one-api": return ("new-api", "New API gateway")
         case "anthropic": return ("anthropic", "Anthropic Usage")
         case "openai": return ("openai", "OpenAI Usage")

@@ -106,10 +106,15 @@ final class UsageMonitorTests {
         #expect(titles == ["GLM Coding Plan", "5h 42%", "1w 7%", "1m 0%", "Refresh Usage"])
     }
 
-    @Test func emptyProducerListDoesNotStartPollTask() {
+    @Test func emptyProducerListStillWritesEmptySnapshot() async throws {
+        // Zero producers is a valid steady state (nothing configured): the
+        // loop must keep running so late configuration takes effect, and
+        // stale usage.json entries get cleared.
         let monitor = UsageMonitor(producers: [], pollInterval: 9999)
         monitor.start()
         monitor.stop()
-        #expect(true)
+        await monitor.pollOnce()
+        #expect(UsageStore.readUsage().providers.isEmpty)
+        #expect(UsageStore.readUsage().order == [])
     }
 }

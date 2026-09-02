@@ -51,24 +51,23 @@ final class ProviderRowStateTests {
         )
     }
 
-    @Test func resolveProducesThreeStates() {
+    @Test func resolveProducesTwoStates() {
         let rows = ProviderSettingsWindowController.RowState.resolve(
             kinds: kinds,
             explicit: [config("deepseek")],
-            autoDiscovered: [config("glm")],
             snapshots: ["glm": snapshot("glm", percent: 5)]
         )
         let stateOf = { key in rows.first { $0.kind.type == key }?.state }
-        #expect(stateOf("glm") == .auto)
         #expect(stateOf("deepseek") == .configured)
         #expect(stateOf("openrouter") == .notConfigured)
+        // No provider is ever auto-configured.
+        #expect(stateOf("glm") == .notConfigured)
     }
 
-    @Test func explicitWinsOverAutoForPrefill() {
+    @Test func configuredRowPrefillsExplicitValues() {
         let rows = ProviderSettingsWindowController.RowState.resolve(
             kinds: kinds,
             explicit: [config("glm", token: "explicit-tok")],
-            autoDiscovered: [config("glm", token: "auto-tok")],
             snapshots: [:]
         )
         let glm = rows.first { $0.kind.type == "glm" }
@@ -80,7 +79,6 @@ final class ProviderRowStateTests {
         let rows = ProviderSettingsWindowController.RowState.resolve(
             kinds: kinds,
             explicit: [],
-            autoDiscovered: [config("glm")],
             snapshots: ["glm": snapshot("glm", percent: 7)]
         )
         #expect(rows.first { $0.kind.type == "glm" }?.snapshot?.items.first?.usedPercent == 7)

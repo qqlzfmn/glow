@@ -323,28 +323,27 @@ protocol MenuContributor: AnyObject {
   官方 usage API 需要组织 admin key，普通 key 会得到 401/403——错误原样显示
   在菜单里，不做特判。
 
-### Provider 矩阵与凭据发现
+### Provider 矩阵与配置
 
-| Provider | type | 凭据 | 来源 |
-|---|---|---|---|
-| GLM Coding Plan | `glm` | token | 自动发现（claude env / opencode auth.json）或显式配置 |
-| GLM Team Plan | `zhipu-team` | token + organization_id + project_id | 显式配置 |
-| Volcengine Ark | `volcengine` | access_key_id + secret_access_key（AK/SK，控制面签名） | 显式配置 |
-| Kimi / MiniMax / ZenMux / OpenCode Go | `kimi` / `minimax` / `zenmux` / `opencode-go` | token | 自动发现或显式配置 |
-| DeepSeek / OpenRouter / SiliconFlow / StepFun | `deepseek` / `openrouter` / `siliconflow` / `stepfun` | token | 显式配置 |
-| Anthropic / OpenAI 官方 usage | `anthropic` / `openai` | 组织 admin key | 显式配置 |
-| New API / One API 网关 | `new-api` | 系统访问令牌 + user_id + base_url | 显式配置 |
+| Provider | type | 凭据 |
+|---|---|---|
+| GLM Coding Plan | `glm` | token |
+| GLM Team Plan | `zhipu-team` | token + organization_id + project_id |
+| Volcengine Ark | `volcengine` | access_key_id + secret_access_key（AK/SK，控制面签名） |
+| Kimi / MiniMax / ZenMux / OpenCode Go | `kimi` / `minimax` / `zenmux` / `opencode-go` | token |
+| DeepSeek / OpenRouter / SiliconFlow / StepFun | `deepseek` / `openrouter` / `siliconflow` / `stepfun` | token |
+| Anthropic / OpenAI 官方 usage | `anthropic` / `openai` | 组织 admin key |
+| New API / One API 网关 | `new-api` | 系统访问令牌 + user_id + base_url |
 
-- 自动发现：`~/.claude/settings.json` env 块按 base_url 域名识别平台；
-  `~/.local/share/opencode/auth.json` 识别 `zhipuai-coding-plan`。
-- 显式配置 `~/.config/glow/usage.json`（0600）覆盖同名自动发现：
-  `{"providers": [{"type": "new-api", "token": "...", "base_url": "https://...", "user_id": "1"}]}`。
+**唯一配置来源**是显式配置文件 `~/.config/glow/usage.json`（0600）：
+`{"providers": [{"type": "new-api", "token": "...", "base_url": "https://...", "user_id": "1"}]}`。
+按用户决定，agent 配置文件（claude env / opencode auth.json）**不再**隐式启用任何 provider。
 - **配置 GUI/CLI**：菜单 "Configure Providers…" 打开 Provider Settings
-  窗口（双栏：左列全部 14 个类型及状态 configured/auto/—，右侧按类型动态
+  窗口（双栏：左列全部 14 个类型及状态 configured/—，右侧按类型动态
   生成凭据表单，secret 字段密码框显示；保存后立即重新拉取）。CLI 侧
   `glow usage-config [list|add [type]|remove <type>]` 共用同一份类型注册表
   （`UsageKinds`）与存储（`UsageConfigStore`，0600）。
-- 每次轮询前重新发现，配置改动无需重启 app。
+- 每次轮询前重新读取配置，改动无需重启 app；无任何配置时 usage.json 为空，菜单不显示 provider。
 
 CLI 子命令 `usage` 打印 usage.json 全文（JSON）。
 

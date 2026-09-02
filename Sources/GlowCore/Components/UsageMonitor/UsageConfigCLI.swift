@@ -7,10 +7,9 @@ import Foundation
 ///     usage-config add [type]      interactive add (prompts for credentials)
 ///     usage-config remove <type>   remove one explicit entry
 ///
-/// Auto-discovered providers (claude env block, opencode auth.json) are shown
-/// in `list` but cannot be edited here — they come from the agent configs.
 /// The provider-type registry is shared with the Provider Settings window
-/// (`UsageKinds.all`).
+/// (`UsageKinds.all`); nothing is auto-configured — only the explicit config
+/// counts.
 enum UsageConfigCLI {
 
     static func run(_ args: [String]) -> Int32 {
@@ -36,21 +35,11 @@ enum UsageConfigCLI {
 
     private static func list() -> Int32 {
         let configuredKeys = Set(UsageConfigStore.load().map { $0.providerKey })
-        let autoDetected = Set(
-            UsageConfig.discoverProviders(home: NSHomeDirectory()).map { $0.providerKey }
-        )
 
         print("Usage providers (configured in \(UsageConfigStore.configFile())):")
         print("")
         for kind in UsageKinds.all {
-            let state: String
-            if configuredKeys.contains(kind.type) {
-                state = "configured"
-            } else if autoDetected.contains(kind.type) {
-                state = "auto-discovered (from agent config)"
-            } else {
-                state = "not configured"
-            }
+            let state = configuredKeys.contains(kind.type) ? "configured" : "not configured"
             print("  \(kind.displayName) [\(kind.type)]: \(state)")
         }
         print("")

@@ -44,7 +44,6 @@ final class UsageMonitor: GlowComponent, MenuContributor {
 
     func start() {
         guard pollTask == nil else { return }
-        guard !producers.isEmpty else { return }
         pollTask = Task { [weak self] in
             while !Task.isCancelled {
                 guard let self else { break }

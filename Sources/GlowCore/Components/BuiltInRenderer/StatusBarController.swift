@@ -12,6 +12,7 @@ final class StatusBarController: NSObject {
     /// Host-injected: opens the Provider Settings window.
     var openProviderSettings: (() -> Void)?
     private var usageBadgeText: String = ""
+    private var badgeView: StatusItemBadgeView?
     private var signalStartedAt: TimeInterval = 0
     private var isFlashing: Bool = false
     private var currentSignal: String = "idle"
@@ -21,6 +22,13 @@ final class StatusBarController: NSObject {
         self.usageMonitor = usageMonitor
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         super.init()
+
+        // Custom-drawn badge (lamp + two-line usage segments); the button's
+        // own image/title rendering cannot do the iStat-style layout.
+        let badge = StatusItemBadgeView(frame: NSRect(x: 0, y: 0, width: 30, height: 24))
+        statusItem.button?.subviews.forEach { $0.removeFromSuperview() }
+        statusItem.button?.addSubview(badge)
+        badgeView = badge
 
         setupMenu()
         updateIcon(aggregateSignal: "idle", isFlashOn: true)
@@ -132,25 +140,10 @@ final class StatusBarController: NSObject {
     // MARK: - Icon Rendering
 
     private func updateIcon(aggregateSignal: String, isFlashOn: Bool) {
-        let size = NSSize(width: 22, height: 22)
-        let image = NSImage(size: size, flipped: false) { [self] rect in
-            let color: NSColor
-            if isFlashOn {
-                color = self.colorForSignal(aggregateSignal)
-            } else {
-                color = self.dimColorForSignal(aggregateSignal)
-            }
-
-            let path = NSBezierPath(ovalIn: rect.insetBy(dx: 1, dy: 1))
-            color.setFill()
-            path.fill()
-
-            return true
-        }
-        image.isTemplate = false
-
-        statusItem.button?.image = image
-        statusItem.button?.title = usageBadgeText
+        currentSignal = aggregateSignal
+        badgeView?.lampColor = colorForSignal(aggregateSignal)
+        badgeView?.lampDimmed = !isFlashOn
+        badgeView?.needsDisplay = true
     }
 
     private func colorForSignal(_ signal: String) -> NSColor {
@@ -317,10 +310,22 @@ extension StatusBarController: NSMenuDelegate {
 }
 
 extension StatusBarController {
-    /// Re-read usage.json and refresh the badge text next to the lamp icon.
+    /// Re-read usage.json and feed the custom badge view. The status item
+    /// length grows/shrinks with the segment count.
     func updateUsageBadge() {
-        usageBadgeText = UsageBadge.badgeText(for: UsageStore.readUsage())
-        updateIcon(aggregateSignal: currentSignal, isFlashOn: isFlashing)
+        let segments = UsageBadge.badgeSegments(for: UsageStore.readUsage())
+        usageBadgeText = segments
+            .map { "\($0.label) \($0.value)" }
+            .joined(separator: "│")
+        badgeView?.segments = segments.map {
+            StatusItemBadgeView.Segment(value: $0.value, label: $0.label)
+        }
+        if let view = badgeView {
+            let width = view.intrinsicContentSize.width
+            statusItem.length = width
+            view.frame = NSRect(x: 0, y: 0, width: width, height: 24)
+            view.needsDisplay = true
+        }
     }
 }
 

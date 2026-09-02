@@ -2,10 +2,10 @@ import Foundation
 
 /// Formats usage numbers for the menu bar badge and menus.
 enum UsageBadge {
-    /// Menu bar badge: the pinned provider's (`badge_provider`) items joined
-    /// with a vertical bar (e.g. `5h 62%│1w 84%│1m 62%`), else the first
-    /// provider (in `order`) with data. Empty when nothing is usable.
-    static func badgeText(for file: UsageFile) -> String {
+    /// Structured badge segments (value/label pairs) for the custom-drawn
+    /// status item: the pinned provider's items, else the first provider
+    /// with data. Empty when nothing is usable.
+    static func badgeSegments(for file: UsageFile) -> [(value: String, label: String)] {
         let keys = file.order ?? file.providers.keys.sorted()
         var candidates = keys
         if let pinned = file.badgeProvider {
@@ -17,11 +17,30 @@ enum UsageBadge {
                   !provider.items.isEmpty else {
                 continue
             }
-            return provider.items.map { itemText($0) }.joined(separator: "│")
+            return provider.items.map { item in
+                (value: itemValue(item), label: item.label)
+            }
         }
-        return ""
+        return []
     }
-    /// One-line text for an item: `5h 42%`, `1w 12.3M`, or `Balance ¥123.45`.
+
+    /// Single-line plain-text badge (`5h 62%│1w 84%`), used by tests and the
+    /// `usage` CLI output consumers.
+    static func badgeText(for file: UsageFile) -> String {
+        badgeSegments(for: file)
+            .map { "\($0.label) \($0.value)" }
+            .joined(separator: "│")
+    }
+
+    private static func itemValue(_ item: UsageItem) -> String {
+        if let percent = item.usedPercent {
+            return String(format: "%.0f%%", percent)
+        }
+        if let remaining = item.remaining {
+            return currency(remaining, unit: item.unit)
+        }
+        return item.label
+    }
     static func itemText(_ item: UsageItem) -> String {
         var parts: [String] = [item.label]
         if let percent = item.usedPercent {

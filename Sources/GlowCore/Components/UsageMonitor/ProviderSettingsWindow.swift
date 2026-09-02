@@ -47,10 +47,11 @@ final class ProviderSettingsWindowController: NSWindowController {
 
     private var tableView: NSTableView?
     private var detailStack: NSStackView?
+    private var pollMinutesField: NSTextField?
     /// Live handles of the form fields of the currently displayed detail.
     private var fieldViews: [(key: String, field: NSTextField)] = []
     private var baseURLField: NSTextField?
-    private var pollMinutesField: NSTextField?
+    private var unitOverrideField: NSTextField?
     /// Optional display-name override field of the current detail form.
     private var displayNameField: NSTextField?
 
@@ -126,15 +127,18 @@ final class ProviderSettingsWindowController: NSWindowController {
         detailStack = stack
 
         let pollLabel = makeLabel("Auto refresh (min)", color: .secondaryLabelColor)
-        pollMinutesField = NSTextField()
-        pollMinutesField?.frame = NSRect(x: 0, y: 0, width: 40, height: 22)
-        pollMinutesField?.target = self
-        pollMinutesField?.action = #selector(pollMinutesChanged)
+        let pollField = NSTextField()
+        pollField.placeholderString = "5"
+        pollField.widthAnchor.constraint(equalToConstant: 44).isActive = true
+        pollField.heightAnchor.constraint(equalToConstant: 22).isActive = true
+        pollField.target = self
+        pollField.action = #selector(pollMinutesChanged)
+        pollMinutesField = pollField
         let refreshButton = NSButton(title: "Refresh Now", target: self, action: #selector(refreshClicked))
         refreshButton.bezelStyle = .rounded
         let closeButton = NSButton(title: "Close", target: self, action: #selector(closeClicked))
         closeButton.bezelStyle = .rounded
-        let pollGroup = NSStackView(views: [pollLabel, pollMinutesField!])
+        let pollGroup = NSStackView(views: [pollLabel, pollField])
         pollGroup.orientation = .horizontal
         pollGroup.spacing = 6
         let buttonRow = NSStackView(views: [pollGroup, refreshButton, closeButton])
@@ -248,6 +252,14 @@ final class ProviderSettingsWindowController: NSWindowController {
         stack.addArrangedSubview(makeFieldRow(label: "Base URL (optional)", field: baseField))
         baseURLField = baseField
 
+        // Display-unit override (extra["unit"]); label swap only, no
+        // conversion. Empty keeps the provider's default unit.
+        let unitField = NSTextField()
+        unitField.placeholderString = kind.type == "new-api" ? "USD" : "USD / CNY"
+        unitField.stringValue = active?.extra["unit"] ?? ""
+        stack.addArrangedSubview(makeFieldRow(label: "Unit (optional)", field: unitField))
+        unitOverrideField = unitField
+
         let save = NSButton(title: "Save", target: self, action: #selector(saveClicked))
         save.bezelStyle = .rounded
         stack.addArrangedSubview(save)
@@ -301,6 +313,10 @@ final class ProviderSettingsWindowController: NSWindowController {
             if !value.isEmpty {
                 extra[entry.key] = value
             }
+        }
+        if let unit = unitOverrideField?.stringValue.trimmingCharacters(in: .whitespacesAndNewlines),
+           !unit.isEmpty {
+            extra["unit"] = unit
         }
         var baseURL: String?
         if let base = baseURLField?.stringValue.trimmingCharacters(in: .whitespacesAndNewlines),

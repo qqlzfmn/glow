@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer || true
+
+      - name: Run tests
+        # CI runners ship a full Xcode, so plain `swift test` works
+        # (local CLT-only hosts need the extra flags documented in CLAUDE.md).
+        run: swift test --enable-swift-testing
+
+      - name: Build release
+        run: swift build -c release

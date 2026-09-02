@@ -49,9 +49,10 @@ final class UsageCodingPlanProviderTests {
         #expect(items[0].resetsAt != nil)
     }
 
-    @Test func glmLitePlanIncludesMonthlyToolQuota() throws {
-        // Live lite-tier shape: one 5h token window plus the monthly
-        // MCP-tool TIME_LIMIT (unit 5); lite has no weekly token window.
+    @Test func glmLitePlanOnlyHasFiveHourTokenWindow() throws {
+        // Live lite-tier shape: a single 5h token window; no weekly token
+        // window exists on lite. TIME_LIMIT unit:5 is the monthly MCP-tool
+        // quota — not token usage — and stays excluded (mirrors cc-switch).
         let body = try json("""
         {"code":200,"msg":"ok","success":true,"data":{"level":"lite","limits":[
             {"type":"TIME_LIMIT","unit":5,"number":1,"usage":100,"currentValue":0,"remaining":100,"percentage":0,"nextResetTime":1789107785999},
@@ -59,12 +60,9 @@ final class UsageCodingPlanProviderTests {
         ]}}
         """)
         let items = try GLMUsageProvider.parse(body)
-        #expect(items.count == 2)
+        #expect(items.count == 1)
         #expect(items[0].label == "5h")
         #expect(items[0].usedPercent == 0)
-        #expect(items[1].label == "1m")
-        #expect(items[1].usedPercent == 0)
-        #expect(items[1].resetsAt == "2026-09-11T06:23:05Z")
     }
 
     @Test func glmResetLessEntryFillsFiveHourSlot() throws {

@@ -234,7 +234,6 @@ blocked（红） > permission（黄） > attention / done（黄） > thinking / 
   ```
   Usage ▸                 GLM Coding Plan
                             5h 42%
-                            1m 0%
                           ─────────
                           Refresh Usage
   ─────────────────────────────

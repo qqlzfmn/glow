@@ -129,18 +129,16 @@ final class GLMUsageProvider: UsageProducer {
 
         var fiveHour: Entry?
         var weekly: Entry?
-        var monthlyMcp: Entry?
         var unclassified: [Entry] = []
         for limit in limits {
-            if isTokenLimit(limit) {
-                let entry = Entry(limit)
-                switch windowClass(limit) {
-                case .fiveHour where fiveHour == nil: fiveHour = entry
-                case .weekly where weekly == nil: weekly = entry
-                default: unclassified.append(entry)
-                }
-            } else if isMonthlyToolLimit(limit), monthlyMcp == nil {
-                monthlyMcp = Entry(limit)
+            // Skip TIME_LIMIT (monthly MCP-tool quota, not token usage) and
+            // unknown entry kinds — mirrors cc-switch's token-tier parsing.
+            guard isTokenLimit(limit) else { continue }
+            let entry = Entry(limit)
+            switch windowClass(limit) {
+            case .fiveHour where fiveHour == nil: fiveHour = entry
+            case .weekly where weekly == nil: weekly = entry
+            default: unclassified.append(entry)
             }
         }
         // Fallback heuristic for entries without a usable `unit` field:
@@ -161,7 +159,7 @@ final class GLMUsageProvider: UsageProducer {
         guard fiveHour != nil || weekly != nil else {
             throw UsageParseError.unexpectedShape("glm: no TOKENS_LIMIT entries in limits")
         }
-        return [(fiveHour, "5h"), (weekly, "1w"), (monthlyMcp, "1m")].compactMap { slot in
+        return [(fiveHour, "5h"), (weekly, "1w")].compactMap { slot in
             slot.0.map { UsageItem(label: slot.1, usedPercent: $0.percentage, remaining: nil, total: nil, unit: nil, resetsAt: $0.resetsAt) }
         }
     }
@@ -182,13 +180,6 @@ final class GLMUsageProvider: UsageProducer {
         return type == "TOKENS_LIMIT" || type == "CREDIT_LIMIT"
     }
 
-    /// `unit: 5` TIME_LIMIT is the monthly MCP-tool usage quota (observed
-    /// models: search-prime / web-reader / zread); other TIME_LIMIT kinds
-    /// are skipped.
-    private static func isMonthlyToolLimit(_ limit: [String: Any]) -> Bool {
-        let type = (limit["type"] as? String)?.uppercased() ?? ""
-        return type == "TIME_LIMIT" && asInt(limit["unit"]) == 5
-    }
 }
 
 // MARK: - Kimi For Coding

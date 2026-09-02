@@ -2,7 +2,7 @@
 
 > AI 编程助手的菜单栏环境状态面板——给 Agent 一盏看得见的状态灯。
 
-Glow 把 macOS 菜单栏变成 AI 编程助手的环境状态面板。Codex、Claude Code 或其他本地 Agent 开始工作、请求权限、遇到阻塞时，菜单栏图标会同步变化。在状态灯之外，Glow 还计划聚合多个 Agent 会话，并逐步呈现模型 provider 的用量状态（token、余额、配额）。
+Glow 把 macOS 菜单栏变成 AI 编程助手的环境状态面板。Codex、Claude Code 或其他本地 Agent 开始工作、请求权限、遇到阻塞时，菜单栏图标会同步变化。在状态灯之外，菜单栏同时呈现模型 provider 的用量状态——配额窗口、余额、轮询节奏全部可配。
 
 它的目标不是炫技，而是让 AI Agent 从屏幕里的文字流，变成一眼就能感知的工作状态。
 
@@ -31,12 +31,13 @@ Glow 给 Agent 一个在菜单栏里的可见存在：
 
 ## 功能亮点
 
-- macOS 菜单栏应用，彩色图标 + 浮动详情面板。
+- macOS 菜单栏应用：信号灯 + iStat 式两行用量徽章（值在上、标签在下）。
 - 支持 Codex hook。
 - 支持 Claude Code hook。
 - 支持 omp / pi（安装 hook 扩展模板，自动联动状态灯）。
 - 支持多个 Agent 会话并发时的状态聚合。
 - 红灯/黄灯告警不会被另一个会话的工作态覆盖。
+- Provider 用量显示：14 个 provider（套餐配额 / 余额 / 官方 usage API），徽章可钉选任意 provider。
 - 支持通过 launchd 开机自启。
 
 ## 快速开始
@@ -47,6 +48,38 @@ open .build/Glow.app                      # 启动
 ```
 
 应用在菜单栏运行，右键点击可查看详情或退出。首次启动会自动配置 launchd 开机自启。
+
+### Usage Providers（provider 用量）
+
+菜单栏徽章除了信号灯，还可以显示模型 provider 的用量。支持的 provider：
+
+| 类型 | type | 凭据 |
+| --- | --- | --- |
+| GLM Coding Plan | `glm` | token |
+| GLM Team Plan | `zhipu-team` | token + organization + project |
+| Volcengine Ark | `volcengine` | AccessKey + Secret（控制面签名） |
+| Kimi For Coding / MiniMax / ZenMux / OpenCode Go | `kimi` / `minimax` / `zenmux` / `opencode-go` | token |
+| DeepSeek / OpenRouter / SiliconFlow / StepFun | `deepseek` / `openrouter` / `siliconflow` / `stepfun` | token |
+| Anthropic / OpenAI 官方 usage | `anthropic` / `openai` | 组织 admin key |
+| New API / One API 网关 | `new-api` | 访问令牌 + user ID + Base URL |
+
+> 按"用量付费"计费的 provider 显示余额（可自定义货币符号），订阅套餐类显示配额窗口百分比（5 Hours / 1 Week / 1 Month）。
+
+配置方式（二选一）：
+
+```bash
+APP=.build/Glow.app/Contents/MacOS/Glow
+
+$APP usage-config list             # 查看全部 provider 与配置状态
+$APP usage-config add deepseek     # 交互式添加（提示输入 key）
+$APP usage-config remove deepseek  # 移除
+```
+
+或菜单栏图标 → Usage → **Configure Providers…** 打开设置窗口，选中类型填写凭据保存。保存后立即刷新，无需重启。
+
+- 徽章钉选：Usage 菜单里点击 provider 名称（打 ✓）即把徽章钉到该 provider；再点取消，回到默认顺序。
+- 自动刷新间隔：设置窗口底部的 "Auto refresh (min)"。
+- 所有 provider 都来自显式配置（`~/.config/glow/usage.json`，0600），不会被 agent 配置隐式启用。
 
 ### Hook 安装
 
@@ -146,7 +179,7 @@ git config core.hooksPath .githooks
 
 ## Roadmap
 
-见 [docs/ROADMAP.md](docs/ROADMAP.md)：M1 状态灯已完成；M2 provider-usage 立项中（token 用量、余额、配额的菜单栏呈现，Producer / Processor / Renderer 插件模型）。
+见 [docs/ROADMAP.md](docs/ROADMAP.md)：M1 状态灯、M2 provider-usage 已完成（14 个 provider、配置 GUI、徽章钉选）；下一步候选见 ROADMAP。
 
 ## 项目状态
 
@@ -154,7 +187,7 @@ git config core.hooksPath .githooks
 
 - 把更多 Agent 系统映射到同一套灯语。
 - 扩展灯语，增加新的信号类型。
-- 自定义菜单栏外观或详情面板。
+- 自定义菜单栏外观或用量展示。
 
 如果 AI Agent 已经成了你的工作流的一部分，给它一盏状态灯。
 

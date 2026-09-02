@@ -88,14 +88,20 @@ Sources/GlowCore/
     │   └── SessionPoller.swift          # 500ms Combine 轮询 sessions.json（Combine 定时器）
     ├── UsageMonitor/               # Producer：provider 用量监控（M2）
     │   ├── UsageMonitor.swift          # 组件宿主：轮询 + 落盘 + 菜单贡献（实现 GlowComponent/MenuContributor）
-    │   ├── UsageCredentials.swift      # 凭据发现（claude env / opencode auth / 显式配置）
-    │   ├── UsageHTTP.swift             # JSON GET 小封装 + UsageParseError
-    │   ├── UsageBadge.swift            # badge/菜单文本格式化
-    │   ├── CodingPlanProviders.swift   # GLM/Kimi/MiniMax/ZenMux/OpenCode Go 配额
+    │   ├── UsageCredentials.swift      # 显式配置解析（唯一来源；GLOW_HOME 可覆盖根目录）
+    │   ├── UsageKinds.swift            # provider 类型注册表（字段/secret/balanceBased/默认端点），GUI 与 CLI 共用
+    │   ├── UsageConfigStore.swift      # usage.json 读写（0600，home 可参数化）
+    │   ├── UsageConfigCLI.swift        # usage-config CLI（list/add/remove 向导）
+    │   ├── UsageHTTP.swift             # JSON GET/POST 封装 + UsageParseError
+    │   ├── UsageBadge.swift            # badge/菜单文本格式化 + 结构化 segments
+    │   ├── CodingPlanProviders.swift   # GLM/团队版/Kimi/MiniMax/ZenMux/OpenCode Go 配额
     │   ├── BalanceProviders.swift      # DeepSeek/OpenRouter/SiliconFlow/StepFun 余额
-    │   └── OfficialUsageProviders.swift# Anthropic/OpenAI 官方 usage API
+    │   ├── GatewayProviders.swift      # New API/One API 网关余额
+    │   ├── OfficialUsageProviders.swift# Anthropic/OpenAI 官方 usage API
+    │   └── VolcengineUsageProvider.swift # 火山方舟（AK/SK SigV4 变体，双 plan 探测）
     └── BuiltInRenderer/           # Renderer：菜单栏
-        └── StatusBarController.swift    # NSStatusItem 灯色图标 + badge 文本 + 闪烁动画 + 右键菜单
+        ├── StatusBarController.swift    # NSStatusItem 装配：菜单、闪烁、钉选、间隔输入
+        └── StatusItemBadgeView.swift    # 自绘状态栏徽章：灯 + 发丝线 + 两行段（值上/标签下）
 ```
 
 同一 SPM target（`Sources/GlowCore`）内部移动无需改 import；`Package.swift`
@@ -232,10 +238,13 @@ blocked（红） > permission（黄） > attention / done（黄） > thinking / 
 - **菜单结构**：
 
   ```
-  Usage ▸                 GLM Coding Plan
-                            5h 42%
+  Usage ▸                 ✓ DMXAPI            （点击钉选徽章；✓ = 当前徽章来源）
+                            Balance $53.2
+                          GLM Coding Plan
+                            5 Hours 42%
                           ─────────
                           Refresh Usage
+                          Configure Providers…
   ─────────────────────────────
   Install Hooks ▸         ✓ Codex            （点击切换安装/卸载）
                             Claude Code
@@ -248,6 +257,10 @@ blocked（红） > permission（黄） > attention / done（黄） > thinking / 
   Clear State
   Quit                    (⌘Q)
   ```
+
+  徽章（菜单栏文字区）为自绘两行式（iStat 风格）：钉选 provider 的全部
+  item 用发丝竖线拼接，值在上、标签在下（`5 Hours 42%│1 Week 7%`）。
+  信号灯与第一段之间同样有竖线分隔。
 
   单个 agent 项为 toggle：已安装打钩，点击即卸载并去钩；未安装点击安装并
   打钩。勾选状态在子菜单每次展开时重新巡检（`menuNeedsUpdate`），Install All

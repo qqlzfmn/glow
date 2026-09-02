@@ -34,6 +34,10 @@ open .build/Glow.app                 # Launch menu bar app
 APP=.build/Glow.app/Contents/MacOS/Glow
 
 $APP status                     # Show aggregated session state
+$APP usage                      # Print usage.json (provider usage snapshot)
+$APP usage-config list          # List supported providers and their config state
+$APP usage-config add [type]    # Interactive provider setup (writes 0600 config)
+$APP usage-config remove <type> # Remove one explicit provider entry
 $APP install-hooks --all --yes  # Install hooks for all agents
 $APP uninstall-hooks --all --yes # Uninstall Glow hooks for all agents (symmetric to install)
 $APP clear-state                # Clear all session state
@@ -67,8 +71,18 @@ There is no linter or formatter configured. No CI pipeline.
     - `InstallHooksCLI.swift` — `install-hooks` / `uninstall-hooks` subcommands: shared argument parsing, agent selection, interactive prompt.
     - `CLIDispatch.swift` — CLI subcommand dispatch (codex-hook / claude-code-hook / status / usage / usage-config / install-hooks / uninstall-hooks / clear-state); returns exit code or nil for GUI mode.
     - `SessionPoller.swift` — 500ms Combine-based polling of `sessions.json`.
+  - `Components/UsageMonitor/` — Producer: provider usage monitoring:
+    - `UsageMonitor.swift` — Host component: polls providers, persists the merged snapshot to `usage.json`, contributes the Usage submenu (provider headers are clickable to pin the badge; persisted as `badge_provider`).
+    - `UsageCredentials.swift` — Explicit-config-only credential discovery (`~/.config/glow/usage.json`, 0600); `GLOW_HOME` overrides the root. Nothing is auto-enabled.
+    - `UsageKinds.swift` — Shared provider-type registry (fields, secret flags, balanceBased, default base URL) used by both the CLI and the Settings window.
+    - `UsageConfigStore.swift` — Read/write/0600 persistence for the config file; parameterized by home for tests.
+    - `UsageConfigCLI.swift` — `usage-config` subcommand (list/add/remove interactive wizard).
+    - `UsageHTTP.swift` — JSON GET/POST helpers + `UsageParseError`.
+    - `UsageBadge.swift` — Badge/menu text formatting; `badgeSegments` feeds the custom status view.
+    - `CodingPlanProviders.swift` / `BalanceProviders.swift` / `GatewayProviders.swift` / `OfficialUsageProviders.swift` / `VolcengineUsageProvider.swift` — 14 provider producers; parsers are pure functions (throw on unknown shape).
   - `Components/BuiltInRenderer/` — Renderer: menu bar only:
-    - `StatusBarController.swift` — NSStatusItem with flash animation, usage badge text, and right-click menu (Usage submenu, Install Hooks with per-agent toggle submenu + Install All + Uninstall All, Clear State, Quit).
+    - `StatusBarController.swift` — NSStatusItem with the custom-drawn badge (`StatusItemBadgeView`), flash animation, and right-click menu (Usage submenu with badge pinning + auto-refresh input, Install Hooks per-agent toggles, Clear State, Quit).
+    - `StatusItemBadgeView.swift` — iStat-style two-line drawing: lamp, hairline separators, value-over-label segments.
 
   See `docs/PLUGINS.md` for the component architecture and plugin guide.
 
@@ -79,7 +93,7 @@ There is no linter or formatter configured. No CI pipeline.
 ### Key patterns
 
 - **Single binary, dual mode**: `CLIDispatch.run(CommandLine.arguments)` checks the arguments — if a subcommand is present, it runs the CLI handler and returns an exit code; on nil the thin `main.swift` launches NSApplication.
-- **JSON file as contract**: The CLI writes `sessions.json`; the GUI reads it. No IPC needed.
+- **JSON files as contract**: Hook CLIs write `sessions.json`; `UsageMonitor` writes `usage.json` (provider snapshots, badge pin, poll cadence); the GUI reads both. No IPC needed.
 - **Multi-session aggregation**: `SessionStore.aggregateSessions()` picks the highest-priority signal so urgent alerts (red/yellow) are never masked by normal activity.
 - **File-lock concurrency**: `SessionStore.withLock()` uses `fcntl.flock(LOCK_EX)` for exclusive access across concurrent hook processes.
 - **Errors are explicit**: No silent `try?` on failure paths that matter. Session writes/locks throw `SessionStoreError`; CLI callers print `glow: <error>` to stderr and exit 1; GUI callers show an alert. Read failures are tolerated (empty state) but corrupt `sessions.json` is traced to stderr.
@@ -94,6 +108,8 @@ There is no linter or formatter configured. No CI pipeline.
 | `uninstall-hooks` | `InstallHooksCLI.run(_:mode:)` |
 | `status` | `SessionStore.readSessionSnapshot()` |
 | `clear-state` | `SessionStore.clearSessionState()` |
+| `usage` | `UsageStore.readUsage()` (pretty JSON) |
+| `usage-config` | `UsageConfigCLI.run()` |
 
 ### Environment variables
 
@@ -102,3 +118,5 @@ There is no linter or formatter configured. No CI pipeline.
 | `GLOW_STATE_DIR` | Session state directory | `/private/tmp/glow` |
 | `GLOW_SESSION_TTL_SECONDS` | Session expiry | `86400` |
 | `GLOW_GUI_POLL_MS` | GUI polling interval | `500` |
+| `GLOW_USAGE_POLL_SECONDS` | Usage poll cadence (wins over `poll_seconds` in usage.json; min 10) | — |
+| `GLOW_HOME` | Home root override for usage config paths (tests/smoke) | — |

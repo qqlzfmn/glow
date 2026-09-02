@@ -11,7 +11,7 @@ Glow 是 macOS 菜单栏的 AI 编程助手环境状态面板：Agent（Codex / 
 
 ## 当前状态快照
 
-- 测试：134 个 Swift Testing 测试 / 13 套件，全绿（`StateDirEnvLock` 见下方陷阱）
+- 测试：157 个 Swift Testing 测试 / 19 套件，全绿（`StateDirEnvLock` 见下方陷阱）
 - 结构：仓库根 SPM 包（`Sources/GlowCore/{Kernel,Components}` + `Sources/Glow` 薄入口 + `Tests/GlowTests`）
 - M2a 已完成：provider-usage（详见下方 M2 节与 docs/PLUGINS.md）
 - 已发布：nightly release（pre-push hook 自动构建上传）；本机 `/Applications/Glow.app` 运行中，launchd `com.qqlzfmn.glow.app` 自启
@@ -54,7 +54,7 @@ Producer（AgentMonitor 等，产生事件，禁碰 UI）
 
 - **AgentMonitor**：4 个 agent 子适配器、事件→信号映射、深度失败探测、sessions.json 契约（flock + TTL）、多会话聚合（blocked > permission > attention/done > working > idle）、install-hooks/uninstall-hooks 双向幂等
 - **BuiltInRenderer**：菜单栏灯色（闪烁语义）+ usage badge + 菜单（详情面板已按用户要求移除）
-- **UsageMonitor**：11 个 provider Producer（配额/余额/官方 usage）、凭据三路自动发现、usage.json 契约、菜单栏 badge、Usage 菜单（逐条目渲染）、`usage` CLI（详见 PLUGINS.md 第 4 节与 HANDOFF M2 节）
+- **UsageMonitor**：14 个 provider Producer（配额/余额/官方 usage，仅显式配置）、usage.json 契约（badge_provider/poll_seconds）、自绘状态栏徽章（badge 钉选 + 多窗口竖线）、Usage 菜单、`usage`/`usage-config` CLI（详见 PLUGINS.md 第 4 节与 HANDOFF M2 节）
 - 协议（GlowComponent/UsageProducer/MenuContributor）已随 M2a 落地于 `Kernel/GlowComponent.swift`；UsageMonitor 为首个实现组件。新增 Usage 架构说明见 `docs/PLUGINS.md` 第 4 节
 
 **兼容性红线**：`isGlowCommand` 识别器中的历史子串（`signal-light codex-hook`、`SignalLightApp codex-hook` 等）用于识别并升级旧版安装，不能删；token 级识别是**精确匹配**（`parts.contains`），orca 的 `codex-hook.sh` 路径不会被误伤——改识别逻辑时保持这两个性质。
@@ -109,10 +109,18 @@ M2a 交付（数据源：用户选定 API usage 端点路线；展示：灯图�
    改动免重启生效）。
 6. **Provider Settings 窗口（GUI，Phase 1）**：菜单 "Configure Providers…"
    打开双栏配置窗口（`ProviderSettingsWindow.swift`）——左列 14 个类型带
-   configured/auto/— 状态徽章，右侧按 `UsageKinds` 动态生成凭据表单
-   （secret 字段 NSSecureTextField），保存/删除走 `UsageConfigStore` 并触发
-   `UsageMonitor.refreshNow()` 立即生效。计划文档：
+   configured/— 状态徽章，右侧按 `UsageKinds` 动态生成凭据表单
+   （secret 字段 NSSecureTextField、Display name 覆盖、Unit 仅余额类、
+   Base URL 仅 usesBaseURL 类且 placeholder 显示默认完整端点），保存/删除
+   走 `UsageConfigStore` 并触发 `UsageMonitor.refreshNow()` 立即生效，
+   窗口 2 秒后自动刷新 Current 行。计划文档：
    `docs/plans/USAGE_GUI_PLAN.md`（Phase 2 主面板待用户拍板）。
+7. **UI 细节迭代（用户反馈驱动）**：badge 改为自绘
+   `StatusItemBadgeView`（iStat 式两行：值上/标签下，发丝竖线更浅、末段
+   无尾线）；窗口标签全称化（5 Hours/1 Week/1 Month）；Usage 菜单 provider
+   行可点击钉选徽章（`badge_provider` 持久化）；自动刷新间隔在窗口底部
+   输入（`poll_seconds`，循环每轮动态读取）；LSUIElement 隐藏 Edit 菜单
+   修复 Cmd+C/V/X/A；`GLOW_HOME` 隔离配置根目录（smoke 不碰真实配置）。
 
 ### M2c 候选（按优先级，详见 docs/ROADMAP.md）
 

@@ -95,7 +95,6 @@ final class NewApiUsageProvider: UsageProducer {
             UsageItem(
                 label: "Balance",
                 usedPercent: usedPercent,
-                used: nil,
                 remaining: remaining,
                 total: total,
                 unit: "USD",

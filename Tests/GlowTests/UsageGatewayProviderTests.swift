@@ -37,7 +37,6 @@ final class UsageGatewayProviderTests {
         #expect(items[0].remaining == 2.0)
         #expect(items[0].total == 3.0)
         #expect(items[0].unit == "USD")
-        #expect(items[0].used == nil)
         #expect(items[0].resetsAt == nil)
         #expect(abs(items[0].usedPercent! - 100.0 / 3.0) < 1e-9)
     }

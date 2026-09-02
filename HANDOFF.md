@@ -104,11 +104,7 @@ M2a 交付（数据源：用户选定 API usage 端点路线；展示：灯图�
 4. **New API / One API 网关**：`GET {base}/api/user/self` + New-Api-User 头
    （查证：issue #5430 强制该头），quota 单位 500000 = $1
    （`GatewayProviders.swift`）。
-5. **Local Sessions**：本地会话 token 统计（`LocalSessionStats.swift`）——
-   Claude JSONL / opencode SQLite / Codex rollout，口径 input+output+
-   cache_creation（排除 cache_read），requestId 去重，滚动 7d/30d，mtime
-   缓存增量。始终启用，无凭据。
-6. **配置可用性**：`usage-config` CLI（list/add/remove 交互向导，0600 配置
+5. **配置可用性**：`usage-config` CLI（list/add/remove 交互向导，0600 配置
    文件）+ 菜单 "Configure Providers…" 入口 + 每轮轮询动态重新发现（配置
    改动免重启生效）。
 

@@ -309,9 +309,8 @@ protocol MenuContributor: AnyObject {
       "error": null,
       "items": [
         { "label": "5h", "used_percent": 42.5, "remaining": null,
-          "used": null, "total": null, "unit": null,
-          "resets_at": "2026-09-02T14:00:00Z" },
-        { "label": "1w", "used": 12300000, "unit": "tokens" }
+          "total": null, "unit": null,
+          "resets_at": "2026-09-02T14:00:00Z" }
       ]
     }
   }
@@ -335,7 +334,6 @@ protocol MenuContributor: AnyObject {
 | DeepSeek / OpenRouter / SiliconFlow / StepFun | `deepseek` / `openrouter` / `siliconflow` / `stepfun` | token | 显式配置 |
 | Anthropic / OpenAI 官方 usage | `anthropic` / `openai` | 组织 admin key | 显式配置 |
 | New API / One API 网关 | `new-api` | 系统访问令牌 + user_id + base_url | 显式配置 |
-| Local Sessions | `sessions`（内置，不可配置） | 无需凭据 | 始终启用 |
 
 - 自动发现：`~/.claude/settings.json` env 块按 base_url 域名识别平台；
   `~/.local/share/opencode/auth.json` 识别 `zhipuai-coding-plan`。
@@ -344,15 +342,6 @@ protocol MenuContributor: AnyObject {
 - **配置向导**：`glow usage-config [list|add [type]|remove <type>]`——交互式
   添加/移除，无需手写 JSON；菜单 "Configure Providers…" 直接打开配置文件。
 - 每次轮询前重新发现，配置改动无需重启 app。
-
-### Local Sessions（本地会话 token 统计）
-
-始终启用的内置 Producer：解析本地 agent 会话日志，产出滚动 7 天 / 30 天的
-token 用量（`used` 字段，`unit: "tokens"`，菜单显示如 `1w 12.3M`）。口径：
-input + output + cache_creation（排除 cache_read），按 requestId 去重。
-数据源：`~/.claude/projects/**/*.jsonl`、`~/.local/share/opencode/opencode.db`、
-`~/.codex/sessions/**/*.jsonl`（口径对齐 cc-switch `session_usage_*.rs`）。
-无任何日志文件时输出 0，不报错。
 
 CLI 子命令 `usage` 打印 usage.json 全文（JSON）。
 

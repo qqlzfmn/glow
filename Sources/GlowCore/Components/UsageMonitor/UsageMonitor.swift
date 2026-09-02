@@ -37,12 +37,9 @@ final class UsageMonitor: GlowComponent, MenuContributor {
     }
 
     /// Resolve the producer set: credential-backed providers from all
-    /// discovery sources plus the always-available local session stats.
-    /// (reads agent logs directly — no credentials needed).
+    /// discovery sources.
     static func discover() -> [any UsageProducer] {
-        var list = UsageConfig.discoverProviders().compactMap { UsageProducerFactory.make($0) }
-        list.append(LocalSessionStatsProvider())
-        return list
+        UsageConfig.discoverProviders().compactMap { UsageProducerFactory.make($0) }
     }
 
     func start() {

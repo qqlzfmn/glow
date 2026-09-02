@@ -182,6 +182,42 @@ final class GLMUsageProvider: UsageProducer {
 
 }
 
+// MARK: - GLM Team Plan (Zhipu organization)
+
+/// Team-plan quota: same endpoint and response shape as the personal plan,
+/// but fixed to the domestic host with `?type=2` plus organization/project
+/// headers (all three credentials required — mirrors cc-switch
+/// `query_zhipu_team`). Parsed by `GLMUsageProvider.parse`.
+final class ZhipuTeamUsageProvider: UsageProducer {
+    let providerKey = "zhipu-team"
+    let displayName = "GLM Team Plan"
+    private let config: UsageProviderConfig
+
+    init(config: UsageProviderConfig) {
+        self.config = config
+    }
+
+    func fetch() async throws -> [UsageItem] {
+        guard let organization = config.extra["organization_id"], !organization.isEmpty,
+              let project = config.extra["project_id"], !project.isEmpty else {
+            throw UsageParseError.unexpectedShape(
+                "zhipu-team: needs organization_id and project_id in the config"
+            )
+        }
+        let response = try await UsageHTTP.getJSON(
+            "https://open.bigmodel.cn/api/monitor/usage/quota/limit?type=2",
+            headers: [
+                "Authorization": config.token,  // raw token, no Bearer prefix
+                "bigmodel-organization": organization,
+                "bigmodel-project": project,
+                "Content-Type": "application/json",
+                "Accept-Language": "en-US,en",
+            ]
+        )
+        return try GLMUsageProvider.parse(response.body)
+    }
+}
+
 // MARK: - Kimi For Coding
 
 final class KimiUsageProvider: UsageProducer {

@@ -88,7 +88,7 @@ final class UsageMonitorTests {
 
         let items = monitor.menuItems()
         let titles = items.compactMap { $0.title.isEmpty ? nil : $0.title }
-        #expect(titles == ["GLM Coding Plan", "5h 42%", "Refresh Usage"])
+        #expect(titles == ["GLM Coding Plan", "5h 42%", "Refresh Usage", "Configure Providers…"])
         #expect(items.first?.isEnabled == false)
         #expect(items[1].indentationLevel == 1)
     }
@@ -103,7 +103,7 @@ final class UsageMonitorTests {
         await monitor.pollOnce()
 
         let titles = monitor.menuItems().compactMap { $0.title.isEmpty ? nil : $0.title }
-        #expect(titles == ["GLM Coding Plan", "5h 42%", "1w 7%", "1m 0%", "Refresh Usage"])
+        #expect(titles == ["GLM Coding Plan", "5h 42%", "1w 7%", "1m 0%", "Refresh Usage", "Configure Providers…"])
     }
 
     @Test func emptyProducerListDoesNotStartPollTask() {

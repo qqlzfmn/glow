@@ -34,10 +34,13 @@ struct ProviderUsage: Codable {
 /// balance (`remaining`). Order in `items` is display order; index 0 is
 /// the badge candidate.
 struct UsageItem: Codable {
-    /// Short label, e.g. `5h window`, `Balance`, `Tokens`.
+    /// Short label, e.g. `5h`, `Balance`, `Tokens`.
     var label: String
     /// 0-100, already used share of a quota window.
     var usedPercent: Double?
+    /// Period usage in absolute units (`used` set, `remaining` nil) —
+    /// e.g. tokens consumed in the last 7/30 days from local session logs.
+    var used: Double?
     /// Remaining balance/quota in `unit`.
     var remaining: Double?
     /// Total quota/balance when the provider reports it.
@@ -46,15 +49,15 @@ struct UsageItem: Codable {
     var unit: String?
     /// ISO 8601 reset timestamp when the provider reports one.
     var resetsAt: String?
-}
 
-extension UsageItem {
     enum CodingKeys: String, CodingKey {
         case label
         case usedPercent = "used_percent"
+        case used
         case remaining
         case total
         case unit
         case resetsAt = "resets_at"
     }
 }
+

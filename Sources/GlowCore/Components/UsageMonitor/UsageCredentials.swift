@@ -11,6 +11,24 @@ struct UsageProviderConfig {
     var baseURL: String?
     /// Bearer/Authorization token.
     var token: String
+    /// Provider-specific additional credentials: `organization_id` /
+    /// `project_id` (GLM team), `access_key_id` / `secret_access_key`
+    /// (Volcengine), etc.
+    var extra: [String: String]
+
+    init(
+        providerKey: String,
+        displayName: String,
+        baseURL: String? = nil,
+        token: String,
+        extra: [String: String] = [:]
+    ) {
+        self.providerKey = providerKey
+        self.displayName = displayName
+        self.baseURL = baseURL
+        self.token = token
+        self.extra = extra
+    }
 }
 
 /// Resolves which usage providers to poll and with which credentials.
@@ -121,11 +139,17 @@ enum UsageConfig {
                 )
                 continue
             }
+            // Everything beyond the well-known keys is a provider-specific
+            // credential (organization_id, project_id, access_key_id, ...).
+            let extra = entry.filter { key, _ in
+                !["type", "token", "base_url"].contains(key)
+            }.compactMapValues { $0 as? String }
             configs.append(UsageProviderConfig(
                 providerKey: key,
                 displayName: name,
                 baseURL: entry["base_url"] as? String,
-                token: token
+                token: token,
+                extra: extra
             ))
         }
         return configs
@@ -170,10 +194,12 @@ enum UsageConfig {
         case "minimax": return ("minimax", "MiniMax Coding Plan")
         case "zenmux": return ("zenmux", "ZenMux")
         case "opencode-go", "opencodego": return ("opencode-go", "OpenCode Go")
+        case "zhipu-team", "glm-team": return ("zhipu-team", "GLM Team Plan")
+        case "volcengine", "ark": return ("volcengine", "Volcengine Ark")
         case "deepseek": return ("deepseek", "DeepSeek")
         case "openrouter": return ("openrouter", "OpenRouter")
         case "siliconflow": return ("siliconflow", "SiliconFlow")
-        case "stepfun": return ("stepfun", "StepFun")
+        case "new-api", "one-api": return ("new-api", "New API gateway")
         case "anthropic": return ("anthropic", "Anthropic Usage")
         case "openai": return ("openai", "OpenAI Usage")
         default: return nil

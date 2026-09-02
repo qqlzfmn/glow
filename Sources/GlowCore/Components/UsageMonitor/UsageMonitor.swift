@@ -7,7 +7,10 @@ import AppKit
 final class UsageMonitor: GlowComponent, MenuContributor {
     let id = "usage-monitor"
 
-    private let producers: [any UsageProducer]
+    /// Explicit producer set for tests; nil means "discover every cycle".
+    private let injectedProducers: [any UsageProducer]?
+    /// Live producer set, refreshed from discovery on every poll.
+    private var producers: [any UsageProducer] = []
     private let pollInterval: TimeInterval
     private var pollTask: Task<Void, Never>?
 
@@ -25,24 +28,36 @@ final class UsageMonitor: GlowComponent, MenuContributor {
     }
 
     /// - Parameters:
-    ///   - producers: explicit producer set; defaults to discovery.
+    ///   - producers: explicit producer set (tests); defaults to discovery.
     ///   - pollInterval: override for tests.
     init(producers: [any UsageProducer]? = nil, pollInterval: TimeInterval? = nil) {
-        if let producers {
-            self.producers = producers
-        } else {
-            self.producers = UsageConfig.discoverProviders()
-                .compactMap { UsageProducerFactory.make($0) }
-        }
+        injectedProducers = producers
+        self.producers = producers ?? Self.discover()
         self.pollInterval = pollInterval ?? Self.defaultPollInterval
     }
 
+    /// Resolve the producer set: credential-backed providers from all
+    /// discovery sources plus the always-available local session stats.
+    /// (reads agent logs directly — no credentials needed).
+    static func discover() -> [any UsageProducer] {
+        var list = UsageConfig.discoverProviders().compactMap { UsageProducerFactory.make($0) }
+        list.append(LocalSessionStatsProvider())
+        return list
+    }
+
     func start() {
-        guard pollTask == nil, !producers.isEmpty else { return }
+        guard pollTask == nil else { return }
+        guard !producers.isEmpty else { return }
         pollTask = Task { [weak self] in
             while !Task.isCancelled {
-                await self?.pollOnce()
-                let interval = self?.pollInterval ?? Self.defaultPollInterval
+                guard let self else { break }
+                // Re-discover every cycle so usage-config edits and agent
+                // credential changes apply live, without an app restart.
+                if injectedProducers == nil {
+                    producers = Self.discover()
+                }
+                await pollOnce()
+                let interval = pollInterval
                 try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
             }
         }
@@ -112,25 +127,37 @@ final class UsageMonitor: GlowComponent, MenuContributor {
         if !items.isEmpty {
             items.append(NSMenuItem.separator())
         }
-        let refresh = NSMenuItem(
-            title: "Refresh Usage",
-            action: #selector(refreshNow),
-            keyEquivalent: ""
-        )
-        refresh.target = self
-        items.append(refresh)
+        items.append(Self.actionItem("Refresh Usage", action: #selector(refreshNow), target: self))
+        items.append(Self.actionItem("Configure Providers…", action: #selector(openConfiguration), target: self))
         return items
     }
+
+    // MARK: - Actions
 
     @objc private func refreshNow() {
         Task { await pollOnce() }
     }
+
+    /// Open (creating if needed) the explicit provider config file in the
+    /// user's default editor. Changes apply on the next poll cycle.
+    @objc private func openConfiguration() {
+        NSWorkspace.shared.open(URL(fileURLWithPath: UsageConfigStore.ensureConfigFile()))
+    }
+
+    // MARK: - Helpers
 
     private static func disabledItem(_ title: String) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
         item.isEnabled = false
         return item
     }
+
+    private static func actionItem(_ title: String, action: Selector, target: AnyObject?) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
+        item.target = target
+        return item
+    }
+
     static func describe(_ error: Error) -> String {
         if let httpError = error as? UsageHTTPError {
             switch httpError {
@@ -150,6 +177,8 @@ enum UsageProducerFactory {
     static func make(_ config: UsageProviderConfig) -> (any UsageProducer)? {
         switch config.providerKey {
         case "glm": return GLMUsageProvider(config: config)
+        case "zhipu-team": return ZhipuTeamUsageProvider(config: config)
+        case "volcengine": return VolcengineUsageProvider(config: config)
         case "kimi": return KimiUsageProvider(config: config)
         case "minimax": return MiniMaxUsageProvider(config: config)
         case "zenmux": return ZenMuxUsageProvider(config: config)
@@ -160,6 +189,7 @@ enum UsageProducerFactory {
         case "stepfun": return StepFunUsageProvider(config: config)
         case "anthropic": return AnthropicUsageProvider(config: config)
         case "openai": return OpenAIUsageProvider(config: config)
+        case "new-api": return NewApiUsageProvider(config: config)
         default:
             fputs("glow: unknown usage provider type \(config.providerKey)\n", stderr)
             return nil

@@ -90,12 +90,32 @@ M2a 交付（数据源：用户选定 API usage 端点路线；展示：灯图�
    （NSMenuDelegate 每次打开重建，逐条目渲染）；CLI `usage` 子命令。详情面板
    已整体删除（含 Show Details 菜单项）。
 
-### M2b 候选（按优先级，详见 docs/ROADMAP.md）
+### M2b（已完成）
 
-new-api/one-api 网关统计 → 火山方舟（AK/SK 自定义 SigV4，参考 coding_plan.rs）→
-智谱团队版（`?type=2` + organization/project 头）→ 本地会话日志 token 统计
-（Claude JSONL / Codex rollout / opencode，参考 cc-switch `session_usage_*.rs`）→
-SignalProducer 协议落地（随 CI Monitor 等组件）。
+补齐用户点名的全部 provider 与配置可用性：
+
+1. **凭据模型扩展**：`UsageProviderConfig.extra`（多凭据字段）+ 显式配置
+   新增 `zhipu-team` / `volcengine` / `new-api` 类型。
+2. **智谱团队版**：同端点 `?type=2` + bigmodel-organization/project 头，
+   复用个人版解析。
+3. **火山方舟**：控制面 OpenAPI AK/SK 签名（SigV4 火山变体：固定头顺序、
+   无 AWS4 前缀、scope 终止 `request`——照搬标准 SigV4 必失败），GetAFPUsage
+   → GetCodingPlanUsage 双 plan 探测（`VolcengineUsageProvider.swift`）。
+4. **New API / One API 网关**：`GET {base}/api/user/self` + New-Api-User 头
+   （查证：issue #5430 强制该头），quota 单位 500000 = $1
+   （`GatewayProviders.swift`）。
+5. **Local Sessions**：本地会话 token 统计（`LocalSessionStats.swift`）——
+   Claude JSONL / opencode SQLite / Codex rollout，口径 input+output+
+   cache_creation（排除 cache_read），requestId 去重，滚动 7d/30d，mtime
+   缓存增量。始终启用，无凭据。
+6. **配置可用性**：`usage-config` CLI（list/add/remove 交互向导，0600 配置
+   文件）+ 菜单 "Configure Providers…" 入口 + 每轮轮询动态重新发现（配置
+   改动免重启生效）。
+
+### M2c 候选（按优先级，详见 docs/ROADMAP.md）
+
+成本估算（模型价格表，参照 cc-switch model_pricing.rs + CostCalculator）→
+usage 菜单显示历史趋势 → SignalProducer 协议落地（随 CI Monitor）。
 
 ### M3+ 组件候选（按优先级，详见 docs/PLUGINS.md 与仓库讨论）
 

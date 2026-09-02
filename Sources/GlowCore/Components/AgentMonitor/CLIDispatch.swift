@@ -42,21 +42,8 @@ public enum CLIDispatch {
             }
             return 0
 
-        case "usage":
-            let usage = UsageStore.readUsage()
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes]
-            let data: Data
-            do {
-                data = try encoder.encode(usage)
-            } catch {
-                fputs("glow: cannot encode usage output: \(error)\n", stderr)
-                return 1
-            }
-            if let json = String(data: data, encoding: .utf8) {
-                print(json)
-            }
-            return 0
+        case "usage-config":
+            return UsageConfigCLI.run(Array(args.dropFirst()))
 
         case "install-hooks":
             return InstallHooksCLI.run(args)

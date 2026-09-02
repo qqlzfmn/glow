@@ -17,15 +17,26 @@ enum UsageBadge {
         return ""
     }
 
-    /// One-line text for an item: `5h window 42%` or `Balance ¥123.45`.
+    /// One-line text for an item: `5h 42%`, `1w 12.3M`, or `Balance ¥123.45`.
     static func itemText(_ item: UsageItem) -> String {
         var parts: [String] = [item.label]
         if let percent = item.usedPercent {
             parts.append(String(format: "%.0f%%", percent))
+        } else if let used = item.used {
+            parts.append(compact(used))
         } else if let remaining = item.remaining {
             parts.append(currency(remaining, unit: item.unit))
         }
         return parts.joined(separator: " ")
+    }
+
+    /// Compact number formatting: K/M suffixes for token-scale values.
+    static func compact(_ value: Double) -> String {
+        switch abs(value) {
+        case 1_000_000...: return String(format: "%.1fM", value / 1_000_000)
+        case 1_000...: return String(format: "%.1fK", value / 1_000)
+        default: return String(format: "%.0f", value)
+        }
     }
 
     /// Compact currency formatting: symbol form for CNY/USD, suffix form

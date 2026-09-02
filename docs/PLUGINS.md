@@ -308,8 +308,10 @@ protocol MenuContributor: AnyObject {
       "status": "ok",
       "error": null,
       "items": [
-        { "label": "5h window", "used_percent": 42.5, "remaining": null,
-          "total": null, "unit": null, "resets_at": "2026-09-02T14:00:00Z" }
+        { "label": "5h", "used_percent": 42.5, "remaining": null,
+          "used": null, "total": null, "unit": null,
+          "resets_at": "2026-09-02T14:00:00Z" },
+        { "label": "1w", "used": 12300000, "unit": "tokens" }
       ]
     }
   }
@@ -317,29 +319,40 @@ protocol MenuContributor: AnyObject {
 ```
 
 - 路径：`StatePaths.usageFile`（`$GLOW_STATE_DIR/usage.json`，默认 `/private/tmp/glow`）；
-- 写入走 `StateFileLock`（与 sessions.json 共用 `state.lock`）互斥；
-- 读取容忍文件缺失/损坏（损坏时 trace 到 stderr，视为空）；
-- `order` 决定 badge 与菜单的 provider 优先级（缺省时按键名排序）；
-- `status == "error"` 时 `error` 携带可读原因，`items` 保留上次成功值；
-- `items[0]` 是该 provider 的 badge 候选；`used_percent` 0-100 已用口径。
+  写入走 `StateFileLock`（与 sessions.json 共用 `state.lock`）。
+- 轮询间隔 `GLOW_USAGE_POLL_SECONDS`（默认 300，下限 10）。Anthropic/OpenAI
+  官方 usage API 需要组织 admin key，普通 key 会得到 401/403——错误原样显示
+  在菜单里，不做特判。
 
-### 凭据发现（`UsageConfig`）
+### Provider 矩阵与凭据发现
 
-三路来源，后者覆盖前者（按 providerKey 去重）：
-1. `~/.claude/settings.json` 的 `env` 块：`ANTHROPIC_BASE_URL` +
-   `ANTHROPIC_AUTH_TOKEN`，按域名识别 coding-plan 平台
-   （bigmodel.cn / api.z.ai → GLM，api.kimi.com/coding → Kimi，
-   api.minimaxi.com → MiniMax，zenmux → ZenMux，opencode.ai/zen/go → OpenCode Go，
-   api.anthropic.com → Anthropic 官方；未知中转忽略）；
-2. `~/.local/share/opencode/auth.json`（当前识别 `zhipuai-coding-plan`）；
-3. 显式配置 `~/.config/glow/usage.json`：
-   `{"providers": [{"type": "glm", "token": "...", "base_url": "..."}]}`，
-   type 取值：glm / kimi / minimax / zenmux / opencode-go / deepseek /
-   openrouter / siliconflow / stepfun / anthropic / openai。
+| Provider | type | 凭据 | 来源 |
+|---|---|---|---|
+| GLM Coding Plan | `glm` | token | 自动发现（claude env / opencode auth.json）或显式配置 |
+| GLM Team Plan | `zhipu-team` | token + organization_id + project_id | 显式配置 |
+| Volcengine Ark | `volcengine` | access_key_id + secret_access_key（AK/SK，控制面签名） | 显式配置 |
+| Kimi / MiniMax / ZenMux / OpenCode Go | `kimi` / `minimax` / `zenmux` / `opencode-go` | token | 自动发现或显式配置 |
+| DeepSeek / OpenRouter / SiliconFlow / StepFun | `deepseek` / `openrouter` / `siliconflow` / `stepfun` | token | 显式配置 |
+| Anthropic / OpenAI 官方 usage | `anthropic` / `openai` | 组织 admin key | 显式配置 |
+| New API / One API 网关 | `new-api` | 系统访问令牌 + user_id + base_url | 显式配置 |
+| Local Sessions | `sessions`（内置，不可配置） | 无需凭据 | 始终启用 |
 
-轮询间隔 `GLOW_USAGE_POLL_SECONDS`（默认 300，下限 10）。Anthropic/OpenAI
-官方 usage API 需要组织 admin key，普通 key 会得到 401/403——错误原样显示在
-菜单里，不做特判。
+- 自动发现：`~/.claude/settings.json` env 块按 base_url 域名识别平台；
+  `~/.local/share/opencode/auth.json` 识别 `zhipuai-coding-plan`。
+- 显式配置 `~/.config/glow/usage.json`（0600）覆盖同名自动发现：
+  `{"providers": [{"type": "new-api", "token": "...", "base_url": "https://...", "user_id": "1"}]}`。
+- **配置向导**：`glow usage-config [list|add [type]|remove <type>]`——交互式
+  添加/移除，无需手写 JSON；菜单 "Configure Providers…" 直接打开配置文件。
+- 每次轮询前重新发现，配置改动无需重启 app。
+
+### Local Sessions（本地会话 token 统计）
+
+始终启用的内置 Producer：解析本地 agent 会话日志，产出滚动 7 天 / 30 天的
+token 用量（`used` 字段，`unit: "tokens"`，菜单显示如 `1w 12.3M`）。口径：
+input + output + cache_creation（排除 cache_read），按 requestId 去重。
+数据源：`~/.claude/projects/**/*.jsonl`、`~/.local/share/opencode/opencode.db`、
+`~/.codex/sessions/**/*.jsonl`（口径对齐 cc-switch `session_usage_*.rs`）。
+无任何日志文件时输出 0，不报错。
 
 CLI 子命令 `usage` 打印 usage.json 全文（JSON）。
 

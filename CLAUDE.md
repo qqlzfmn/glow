@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Glow provides an ambient environment status panel for AI coding assistants (Codex, Claude Code, omp, pi). It is a **single Swift macOS app** that serves both as a menu bar GUI and as a hook CLI for agents.
 
 The same binary operates in two modes:
-- **GUI mode** (no arguments) — Menu bar app that reads session state and renders a colored icon + floating detail panel.
+- **GUI mode** (no arguments) — Menu bar app that reads session state and renders a colored icon (with usage badge).
 - **CLI mode** (`codex-hook`, `claude-code-hook`, `install-hooks`, `status`) — Runs as a hook command invoked by agents, writing session state to a shared JSON file.
 
 Communication between agents and the GUI is via a shared JSON file (`/private/tmp/glow/sessions.json`).
@@ -67,10 +67,8 @@ There is no linter or formatter configured. No CI pipeline.
     - `InstallHooksCLI.swift` — `install-hooks` / `uninstall-hooks` subcommands: shared argument parsing, agent selection, interactive prompt.
     - `CLIDispatch.swift` — CLI subcommand dispatch (codex-hook / claude-code-hook / status / install-hooks / uninstall-hooks / clear-state); returns exit code or nil for GUI mode.
     - `SessionPoller.swift` — 500ms Combine-based polling of `sessions.json`.
-  - `Components/BuiltInRenderer/` — Renderer: menu bar + detail panel:
-    - `StatusBarController.swift` — NSStatusItem with flash animation and right-click menu (Show Details, Install Hooks with per-agent submenu + Install All + Uninstall All, Clear State, Quit).
-    - `DetailPanelWindow.swift` — Floating NSPanel with traffic light animation.
-    - `TrafficLightView.swift` — Custom NSView drawing three colored circles (red/yellow/green).
+  - `Components/BuiltInRenderer/` — Renderer: menu bar only:
+    - `StatusBarController.swift` — NSStatusItem with flash animation, usage badge text, and right-click menu (Usage submenu, Install Hooks with per-agent toggle submenu + Install All + Uninstall All, Clear State, Quit).
 
   See `docs/PLUGINS.md` for the component architecture and plugin guide.
 

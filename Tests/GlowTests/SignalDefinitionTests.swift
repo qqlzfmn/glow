@@ -15,15 +15,6 @@ import Foundation
         #expect(Set(SIGNAL_DEFINITIONS.keys) == expected)
     }
 
-    // MARK: - SignalColor.colorKey
-
-    @Test func signalColorKeys() {
-        #expect(SignalColor.green.colorKey == "green")
-        #expect(SignalColor.yellow.colorKey == "yellow")
-        #expect(SignalColor.red.colorKey == "red")
-        #expect(SignalColor.grey.colorKey == "grey")
-    }
-
     // MARK: - SIGNAL_NAMES consistency
 
     @Test func signalNamesDerivedFromRegistry() {

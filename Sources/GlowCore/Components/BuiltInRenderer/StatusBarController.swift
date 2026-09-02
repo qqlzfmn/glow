@@ -10,7 +10,6 @@ final class StatusBarController: NSObject {
 
     private weak var usageMonitor: UsageMonitor?
     private var usageBadgeText: String = ""
-    private var panel: DetailPanelWindow?
     private var signalStartedAt: TimeInterval = 0
     private var isFlashing: Bool = false
     private var currentSignal: String = "idle"
@@ -36,9 +35,6 @@ final class StatusBarController: NSObject {
     private func setupMenu() {
         let menu = NSMenu()
 
-        let detailsItem = NSMenuItem(title: "Show Details", action: #selector(togglePanel), keyEquivalent: "d")
-        detailsItem.target = self
-        menu.addItem(detailsItem)
 
         // Usage submenu — contents rebuilt on every open (NSMenuDelegate).
         let usageMenu = NSMenu(title: "Usage")
@@ -51,6 +47,7 @@ final class StatusBarController: NSObject {
 
         // Install Hooks → per-agent submenu
         let installMenu = NSMenu(title: "Install Hooks")
+        installMenu.delegate = self
         for agent in HookInstaller.Agent.allCases {
             let item = NSMenuItem(
                 title: agent.displayName,
@@ -109,16 +106,6 @@ final class StatusBarController: NSObject {
             updateIcon(aggregateSignal: signalName, isFlashOn: true)
         }
 
-        // Update panel.
-        if let panel = panel, panel.isVisible {
-            panel.updateSignal(
-                name: def?.name ?? signalName,
-                summary: def?.summary ?? "",
-                sessionCount: state.sessionCount,
-                isRepeating: def?.isRepeating ?? false,
-                flashColor: SIGNAL_DEFINITIONS[signalName]?.color.colorKey ?? "grey"
-            )
-        }
     }
 
     private func startFlashTimer() {
@@ -177,34 +164,6 @@ final class StatusBarController: NSObject {
 
     // MARK: - Actions
 
-    @objc private func togglePanel() {
-        if let panel = panel, panel.isVisible {
-            panel.orderOut(nil)
-            return
-        }
-
-        if panel == nil {
-            let panelWidth: CGFloat = 260
-            let panelHeight: CGFloat = 340
-            panel = DetailPanelWindow(
-                contentRect: NSRect(x: 0, y: 0, width: panelWidth, height: panelHeight),
-                styleMask: [.nonactivatingPanel, .titled, .closable],
-                backing: .buffered,
-                defer: true
-            )
-        }
-
-        let state = poller.currentState
-        let def = SIGNAL_DEFINITIONS[state.aggregateSignal]
-        panel?.updateSignal(
-            name: def?.name ?? state.aggregateSignal,
-            summary: def?.summary ?? "",
-            sessionCount: state.sessionCount,
-            isRepeating: def?.isRepeating ?? false,
-            flashColor: SIGNAL_DEFINITIONS[state.aggregateSignal]?.color.colorKey ?? "grey"
-        )
-        panel?.showPanel()
-    }
 
     @objc private func quit() {
         NSApp.terminate(nil)
@@ -246,9 +205,16 @@ final class StatusBarController: NSObject {
         let result = wasInstalled
             ? HookInstaller.uninstallAgentAndReport(agent)
             : HookInstaller.installAgentAndReport(agent)
-
         let succeeded = wasInstalled ? !result.installed : result.installed
-        if !succeeded {
+        if succeeded {
+            // Live refresh while the menu is still open (Install All and
+            // Uninstall All share this via menuNeedsUpdate on reopen).
+            for item in sender.menu?.items ?? [] {
+                guard let raw = item.representedObject as? String,
+                      let other = HookInstaller.Agent(rawValue: raw) else { continue }
+                item.state = HookInstaller.inspectAgent(other).installed ? .on : .off
+            }
+        } else {
             let alert = NSAlert()
             alert.messageText = "\(agent.displayName) Hooks"
             alert.informativeText = result.message

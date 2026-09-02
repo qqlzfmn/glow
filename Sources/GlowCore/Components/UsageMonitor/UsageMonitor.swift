@@ -97,13 +97,17 @@ final class UsageMonitor: GlowComponent, MenuContributor {
         let usage = UsageStore.readUsage()
         for key in usage.order ?? usage.providers.keys.sorted() {
             guard let provider = usage.providers[key] else { continue }
-            let item = NSMenuItem(
-                title: Self.menuTitle(for: provider),
-                action: nil,
-                keyEquivalent: ""
-            )
-            item.isEnabled = false
-            items.append(item)
+            if provider.status == "error", let error = provider.error {
+                items.append(Self.disabledItem("\(provider.displayName) — \(error)"))
+                continue
+            }
+            // Section header, then one row per item (5h / 1w / 1m / balance).
+            items.append(Self.disabledItem(provider.displayName))
+            for item in provider.items {
+                let row = Self.disabledItem(UsageBadge.itemText(item))
+                row.indentationLevel = 1
+                items.append(row)
+            }
         }
         if !items.isEmpty {
             items.append(NSMenuItem.separator())
@@ -122,20 +126,11 @@ final class UsageMonitor: GlowComponent, MenuContributor {
         Task { await pollOnce() }
     }
 
-    // MARK: - Presentation helpers
-
-    /// Menu line for one provider: "GLM Coding Plan — 5h window 42%" or the
-    /// error text. Kept beside `UsageBadge` so both stay in sync.
-    static func menuTitle(for provider: ProviderUsage) -> String {
-        if provider.status == "error", let error = provider.error {
-            return "\(provider.displayName) — \(error)"
-        }
-        guard let item = provider.items.first else {
-            return "\(provider.displayName) — no data"
-        }
-        return "\(provider.displayName) — \(UsageBadge.itemText(item))"
+    private static func disabledItem(_ title: String) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+        item.isEnabled = false
+        return item
     }
-
     static func describe(_ error: Error) -> String {
         if let httpError = error as? UsageHTTPError {
             switch httpError {

@@ -53,8 +53,8 @@ Producer（AgentMonitor 等，产生事件，禁碰 UI）
 新套件再碰该 env 时照抄此模式。
 
 - **AgentMonitor**：4 个 agent 子适配器、事件→信号映射、深度失败探测、sessions.json 契约（flock + TTL）、多会话聚合（blocked > permission > attention/done > working > idle）、install-hooks/uninstall-hooks 双向幂等
-- **BuiltInRenderer**：菜单栏灯色（闪烁语义）、详情面板交通灯动画、菜单
-- **UsageMonitor**：11 个 provider Producer（配额/余额/官方 usage）、凭据三路自动发现、usage.json 契约、菜单栏 badge、Usage 菜单/详情面板区块、`usage` CLI（详见 PLUGINS.md 第 4 节与 HANDOFF M2 节）
+- **BuiltInRenderer**：菜单栏灯色（闪烁语义）+ usage badge + 菜单（详情面板已按用户要求移除）
+- **UsageMonitor**：11 个 provider Producer（配额/余额/官方 usage）、凭据三路自动发现、usage.json 契约、菜单栏 badge、Usage 菜单（逐条目渲染）、`usage` CLI（详见 PLUGINS.md 第 4 节与 HANDOFF M2 节）
 - 协议（GlowComponent/UsageProducer/MenuContributor）已随 M2a 落地于 `Kernel/GlowComponent.swift`；UsageMonitor 为首个实现组件。新增 Usage 架构说明见 `docs/PLUGINS.md` 第 4 节
 
 **兼容性红线**：`isGlowCommand` 识别器中的历史子串（`signal-light codex-hook`、`SignalLightApp codex-hook` 等）用于识别并升级旧版安装，不能删；token 级识别是**精确匹配**（`parts.contains`），orca 的 `codex-hook.sh` 路径不会被误伤——改识别逻辑时保持这两个性质。
@@ -76,7 +76,8 @@ Producer（AgentMonitor 等，产生事件，禁碰 UI）
 M2a 交付（数据源：用户选定 API usage 端点路线；展示：灯图标旁 badge 文本）：
 
 1. **组件协议**：`Kernel/GlowComponent.swift`（GlowComponent/UsageProducer/
-   MenuContributor）；SignalProducer/PanelContributor 仍为草案。
+   MenuContributor）；SignalProducer 仍为草案，PanelContributor 随详情面板
+   移除而作废。
 2. **usage.json 契约**：`StatePaths.usageFile`，`StateFileLock`（与 sessions.json
    共用 `state.lock`），snake_case 编码，`order` 定 badge 优先级。
 3. **UsageMonitor 组件**：轮询（`GLOW_USAGE_POLL_SECONDS`，默认 300s）→ 逐
@@ -86,14 +87,16 @@ M2a 交付（数据源：用户选定 API usage 端点路线；展示：灯图�
    throw 不许空数组伪装成功）。凭据发现 `UsageConfig`：claude env 块按域名识别
    平台 / opencode auth.json / 显式 `~/.config/glow/usage.json`（type+token）。
 5. **渲染**：StatusBarController badge 文本（UsageBadge 格式化）+ Usage 子菜单
-   （NSMenuDelegate 每次打开重建）+ 详情面板 Usage 区块；CLI `usage` 子命令。
+   （NSMenuDelegate 每次打开重建，逐条目渲染）；CLI `usage` 子命令。详情面板
+   已整体删除（含 Show Details 菜单项）。
 
 ### M2b 候选（按优先级，详见 docs/ROADMAP.md）
 
 new-api/one-api 网关统计 → 火山方舟（AK/SK 自定义 SigV4，参考 coding_plan.rs）→
 智谱团队版（`?type=2` + organization/project 头）→ 本地会话日志 token 统计
 （Claude JSONL / Codex rollout / opencode，参考 cc-switch `session_usage_*.rs`）→
-SignalProducer/PanelContributor 协议落地（随 CI Monitor 等组件）。
+SignalProducer 协议落地（随 CI Monitor 等组件）。
+
 ### M3+ 组件候选（按优先级，详见 docs/PLUGINS.md 与仓库讨论）
 
 CI Monitor（GitHub Actions 状态→红灯）→ Alert Center（黄/红灯超时升级为本地通知）→ Session Stats（会话统计面板）→ Hardware Lamp Renderer（MCP2221A 实体灯，致敬上游）→ Web Dashboard / Shortcuts Bridge。

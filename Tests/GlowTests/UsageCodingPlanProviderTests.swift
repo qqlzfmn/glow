@@ -49,6 +49,24 @@ final class UsageCodingPlanProviderTests {
         #expect(items[0].resetsAt != nil)
     }
 
+    @Test func glmLitePlanIncludesMonthlyToolQuota() throws {
+        // Live lite-tier shape: one 5h token window plus the monthly
+        // MCP-tool TIME_LIMIT (unit 5); lite has no weekly token window.
+        let body = try json("""
+        {"code":200,"msg":"ok","success":true,"data":{"level":"lite","limits":[
+            {"type":"TIME_LIMIT","unit":5,"number":1,"usage":100,"currentValue":0,"remaining":100,"percentage":0,"nextResetTime":1789107785999},
+            {"type":"TOKENS_LIMIT","unit":3,"number":5,"percentage":0}
+        ]}}
+        """)
+        let items = try GLMUsageProvider.parse(body)
+        #expect(items.count == 2)
+        #expect(items[0].label == "5h")
+        #expect(items[0].usedPercent == 0)
+        #expect(items[1].label == "1m")
+        #expect(items[1].usedPercent == 0)
+        #expect(items[1].resetsAt == "2026-09-11T06:23:05Z")
+    }
+
     @Test func glmResetLessEntryFillsFiveHourSlot() throws {
         // A 0% 5h bucket may lack nextResetTime; it must claim the 5h slot
         // while the reset-bearing entry fills the weekly slot.

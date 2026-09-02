@@ -37,7 +37,7 @@ Glow 是 AI 编程助手的菜单栏环境状态面板，从"agent 状态灯"演
 - **契约**（已落地）：`usage.json`（`StatePaths.usageFile`，flock 互斥，
   `order` 定优先级），CLI `usage` 子命令打印快照。
 - **Renderer**（已落地）：菜单栏 badge 文本（首个可用 provider 首条 item）、
-  Usage 子菜单、详情面板 Usage 区块。
+  Usage 子菜单（逐条目渲染 5h/1w/1m/余额）。详情面板已移除。
 - 后续批次（按优先级）：new-api / one-api 网关统计 → 火山方舟（AK/SK 签名）→
   智谱团队版（`?type=2`）→ 本地会话日志 token 统计（Claude JSONL / Codex
   rollout / opencode，参照 cc-switch `session_usage_*.rs` 口径）→ Session Stats 面板。

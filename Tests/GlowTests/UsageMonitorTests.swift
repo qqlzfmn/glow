@@ -88,8 +88,22 @@ final class UsageMonitorTests {
 
         let items = monitor.menuItems()
         let titles = items.compactMap { $0.title.isEmpty ? nil : $0.title }
-        #expect(titles == ["GLM Coding Plan — 5h 42%", "Refresh Usage"])
+        #expect(titles == ["GLM Coding Plan", "5h 42%", "Refresh Usage"])
         #expect(items.first?.isEnabled == false)
+        #expect(items[1].indentationLevel == 1)
+    }
+
+    @Test func menuItemsRenderEveryItemOfAProvider() async throws {
+        let ok = MockProducer(key: "glm", name: "GLM Coding Plan", result: .success([
+            UsageItem(label: "5h", usedPercent: 42),
+            UsageItem(label: "1w", usedPercent: 7),
+            UsageItem(label: "1m", usedPercent: 0),
+        ]))
+        let monitor = UsageMonitor(producers: [ok], pollInterval: 9999)
+        await monitor.pollOnce()
+
+        let titles = monitor.menuItems().compactMap { $0.title.isEmpty ? nil : $0.title }
+        #expect(titles == ["GLM Coding Plan", "5h 42%", "1w 7%", "1m 0%", "Refresh Usage"])
     }
 
     @Test func emptyProducerListDoesNotStartPollTask() {

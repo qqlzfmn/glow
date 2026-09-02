@@ -5,16 +5,6 @@ import AppKit
 enum SignalColor {
     case green, yellow, red, grey
 
-    /// Stable string key for the color (used by the detail panel).
-    var colorKey: String {
-        switch self {
-        case .green:  return "green"
-        case .yellow: return "yellow"
-        case .red:    return "red"
-        case .grey:   return "grey"
-        }
-    }
-
     var nsColor: NSColor {
         switch self {
         case .green:  return NSColor(red: 76/255,  green: 175/255, blue: 80/255,  alpha: 1)

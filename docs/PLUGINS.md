@@ -40,7 +40,7 @@ flowchart LR
     BUS --> AG
     AG --> SP
     AG --> BR
-    BR --> UI["菜单栏灯 + 详情面板"]
+    BR --> UI["菜单栏灯 + badge + 菜单"]
 ```
 
 ### 职责表
@@ -49,7 +49,7 @@ flowchart LR
 |---|---|---|
 | **Producer** | 感知外部事件（agent hook、轮询、系统状态），把事件翻译成标准信号写入事件总线 | **禁止碰 UI**；禁止消费其他组件的信号 |
 | **Processor** | 对事件做转换/升级（去重、聚合、衍生新事件）（M2 起引入） | 只读入事件、只写事件，不持久化 UI 状态 |
-| **Renderer** | 消费信号渲染界面（菜单栏图标、详情面板、菜单项） | **禁止产生事件**；禁止直写 sessions.json |
+| **Renderer** | 消费信号渲染界面（菜单栏图标、badge、菜单项） | **禁止产生事件**；禁止直写 sessions.json |
 | **Kernel** | 事件总线、`SignalSemantics` 聚合仲裁、`StatePaths` 文件契约、组件生命周期（注册/启动/停止） | 不含业务语义，只做分发与仲裁 |
 
 ### Kernel 的四项职责
@@ -94,10 +94,8 @@ Sources/GlowCore/
     │   ├── CodingPlanProviders.swift   # GLM/Kimi/MiniMax/ZenMux/OpenCode Go 配额
     │   ├── BalanceProviders.swift      # DeepSeek/OpenRouter/SiliconFlow/StepFun 余额
     │   └── OfficialUsageProviders.swift# Anthropic/OpenAI 官方 usage API
-    └── BuiltInRenderer/           # Renderer：菜单栏 + 详情面板
-        ├── StatusBarController.swift    # NSStatusItem 灯色图标 + badge 文本 + 闪烁动画 + 右键菜单
-        ├── DetailPanelWindow.swift      # 浮动 NSPanel 详情窗（含 Usage 区块）
-        └── TrafficLightView.swift       # 自绘红/黄/绿三色交通灯 NSView
+    └── BuiltInRenderer/           # Renderer：菜单栏
+        └── StatusBarController.swift    # NSStatusItem 灯色图标 + badge 文本 + 闪烁动画 + 右键菜单
 ```
 
 同一 SPM target（`Sources/GlowCore`）内部移动无需改 import；`Package.swift`
@@ -231,14 +229,18 @@ blocked（红） > permission（黄） > attention / done（黄） > thinking / 
   working / tool_done 绿闪、attention / permission / done 黄闪、blocked 红闪）
   周期性闪烁提醒；非重复信号常亮（idle 绿灯常亮、session_start / session_end /
   off 不闪）。
-- **详情面板**（`DetailPanelWindow` + `TrafficLightView`）：浮动 NSPanel，用
-  自绘红/黄/绿交通灯展示每个会话的信号与更新时间，聚合状态置顶。
 - **菜单结构**：
 
   ```
-  Show Details            (⌘D)
+  Usage ▸                 GLM Coding Plan
+                            5h 42%
+                            1m 0%
+                          ─────────
+                          Refresh Usage
   ─────────────────────────────
-  Install Hooks ▸         Codex / Claude Code / omp / pi
+  Install Hooks ▸         ✓ Codex            （点击切换安装/卸载）
+                            Claude Code
+                            omp / pi
                           ─────────
                           Install All
                           ─────────
@@ -248,9 +250,12 @@ blocked（红） > permission（黄） > attention / done（黄） > thinking / 
   Quit                    (⌘Q)
   ```
 
-  Install/Uninstall All 对全部四个 agent 逐一执行并以 alert 汇总各 agent 的
-  message（install 后的 message 为 `installed` / `install failed: …`，
-  uninstall 后为 `uninstalled` / `not installed`）。
+  单个 agent 项为 toggle：已安装打钩，点击即卸载并去钩；未安装点击安装并
+  打钩。勾选状态在子菜单每次展开时重新巡检（`menuNeedsUpdate`），Install All
+  / Uninstall All 与单个 toggle 的结果在下一次展开时全部联动刷新；失败弹
+  warning alert，成功静默（钩选即反馈）。Install/Uninstall All 对全部四个
+  agent 逐一执行并以 alert 汇总（install 后的 message 为 `installed` /
+  `install failed: …`，uninstall 后为 `uninstalled` / `not installed`）。
 
 ## 4. 组件协议（M2 落地于 `Kernel/GlowComponent.swift`）
 
@@ -287,7 +292,8 @@ protocol MenuContributor: AnyObject {
 ```
 
 - `SignalProducer`（产生 `(sessionKey, signal)` 事件的 agent 事件类组件）
-  与 `PanelContributor`（详情面板区块视图）仍为草案，待后续组件落地时淬炼。
+  仍为草案，待后续组件落地时淬炼；原 `PanelContributor` 草案随详情面板移除
+  而作废。
 - UsageMonitor 是第一个实现 `GlowComponent + MenuContributor` 的组件；
   `UsageProducer` 的实现是各 provider 类（`GLMUsageProvider` 等）。
 

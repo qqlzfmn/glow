@@ -2,7 +2,7 @@ import Foundation
 
 // Official provider usage parsers: Anthropic Usage/Cost Admin API and the
 // OpenAI Usage API. Both report org-level token counts per time bucket, so
-// both produce the same single "Tokens (1d)" item:
+// both produce the same single "1d" item:
 //   - `remaining` carries output tokens (the "remaining" quota slot is not
 //     meaningful for these endpoints; kept simple by contract).
 //   - `total` carries input+cache tokens.
@@ -27,7 +27,7 @@ private enum OfficialUsage {
     /// Build the single display item from window token totals.
     static func tokenItem(output: Double, input: Double) -> [UsageItem] {
         [UsageItem(
-            label: "Tokens (1d)",
+            label: "1d",
             usedPercent: nil,
             remaining: output,
             total: input,

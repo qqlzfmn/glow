@@ -35,7 +35,7 @@ final class UsageStoreTests {
                     updatedAt: 1730000000,
                     status: "ok",
                     error: nil,
-                    items: [UsageItem(label: "5h window", usedPercent: 42.5)]
+                    items: [UsageItem(label: "5h", usedPercent: 42.5)]
                 ),
                 "deepseek": ProviderUsage(
                     displayName: "DeepSeek",
@@ -65,7 +65,7 @@ final class UsageStoreTests {
                     status: "ok",
                     error: nil,
                     items: [UsageItem(
-                        label: "5h window",
+                        label: "5h",
                         usedPercent: 1,
                         remaining: nil,
                         total: nil,

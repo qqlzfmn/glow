@@ -158,7 +158,7 @@ final class GLMUsageProvider: UsageProducer {
         guard fiveHour != nil || weekly != nil else {
             throw UsageParseError.unexpectedShape("glm: no TOKENS_LIMIT entries in limits")
         }
-        return [(fiveHour, "5h window"), (weekly, "Weekly")].compactMap { slot in
+        return [(fiveHour, "5h"), (weekly, "1w")].compactMap { slot in
             slot.0.map { UsageItem(label: slot.1, usedPercent: $0.percentage, remaining: nil, total: nil, unit: nil, resetsAt: $0.resetsAt) }
         }
     }
@@ -210,11 +210,11 @@ final class KimiUsageProvider: UsageProducer {
         if let limits = root["limits"] as? [[String: Any]] {
             for limit in limits {
                 guard let detail = asObject(limit["detail"]) else { continue }
-                items.append(windowItem(label: "5h window", detail: detail))
+                items.append(windowItem(label: "5h", detail: detail))
             }
         }
         if let usage = asObject(root["usage"]) {
-            items.append(windowItem(label: "Weekly", detail: usage))
+            items.append(windowItem(label: "1w", detail: usage))
         }
         guard !items.isEmpty else {
             throw UsageParseError.unexpectedShape("kimi: no limits or usage data")
@@ -294,7 +294,7 @@ final class MiniMaxUsageProvider: UsageProducer {
         var items: [UsageItem] = []
         if let remain = parseF64(item["current_interval_remaining_percent"]) {
             items.append(UsageItem(
-                label: "5h window",
+                label: "5h",
                 usedPercent: 100 - remain,
                 remaining: nil,
                 total: nil,
@@ -307,7 +307,7 @@ final class MiniMaxUsageProvider: UsageProducer {
         if asInt(item["current_weekly_status"]) == 1,
            let remain = parseF64(item["current_weekly_remaining_percent"]) {
             items.append(UsageItem(
-                label: "Weekly",
+                label: "1w",
                 usedPercent: 100 - remain,
                 remaining: nil,
                 total: nil,
@@ -372,10 +372,10 @@ final class ZenMuxUsageProvider: UsageProducer {
         }
         var items: [UsageItem] = []
         if let quota = asObject(data["quota_5_hour"]) {
-            items.append(windowItem(label: "5h window", quota: quota))
+            items.append(windowItem(label: "5h", quota: quota))
         }
         if let quota = asObject(data["quota_7_day"]) {
-            items.append(windowItem(label: "Weekly", quota: quota))
+            items.append(windowItem(label: "1w", quota: quota))
         }
         guard !items.isEmpty else {
             throw UsageParseError.unexpectedShape("zenmux: no quota windows in data")
@@ -425,9 +425,9 @@ final class OpenCodeGoUsageProvider: UsageProducer {
     /// the shape count as unrecognized.
     static func parse(_ body: Any) throws -> [UsageItem] {
         let windows: [(key: String, label: String)] = [
-            ("rolling", "5h window"),
-            ("weekly", "Weekly"),
-            ("monthly", "Monthly"),
+            ("rolling", "5h"),
+            ("weekly", "1w"),
+            ("monthly", "1m"),
         ]
         guard let usage = asObject(body)?["usage"] as? [String: Any] else {
             throw UsageParseError.unexpectedShape("opencode-go: missing usage object")

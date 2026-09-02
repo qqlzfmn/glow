@@ -30,9 +30,9 @@ final class UsageBadgeTests {
     @Test func badgeShowsFirstOkProviderInOrder() {
         let usage = file([
             ("deepseek", "error", UsageItem(label: "Balance", remaining: 99)),
-            ("glm", "ok", UsageItem(label: "5h window", usedPercent: 42)),
+            ("glm", "ok", UsageItem(label: "5h", usedPercent: 42)),
         ])
-        #expect(UsageBadge.badgeText(for: usage) == "5h window 42%")
+        #expect(UsageBadge.badgeText(for: usage) == "5h 42%")
     }
 
     @Test func badgeSkipsEmptyAndErrorProviders() {
@@ -52,17 +52,17 @@ final class UsageBadgeTests {
 
     @Test func badgeFallsBackToSortedKeysWithoutOrder() {
         var usage = file([
-            ("zzz", "ok", UsageItem(label: "5h window", usedPercent: 7)),
-            ("aaa", "ok", UsageItem(label: "5h window", usedPercent: 9)),
+            ("zzz", "ok", UsageItem(label: "5h", usedPercent: 7)),
+            ("aaa", "ok", UsageItem(label: "5h", usedPercent: 9)),
         ])
         usage.order = nil
-        #expect(UsageBadge.badgeText(for: usage) == "5h window 9%")
+        #expect(UsageBadge.badgeText(for: usage) == "5h 9%")
     }
 
     // MARK: - itemText
 
     @Test func itemTextPercentAndBalance() {
-        #expect(UsageBadge.itemText(UsageItem(label: "5h window", usedPercent: 42.4)) == "5h window 42%")
+        #expect(UsageBadge.itemText(UsageItem(label: "5h", usedPercent: 42.4)) == "5h 42%")
         #expect(UsageBadge.itemText(UsageItem(label: "Balance", remaining: 123.4, unit: "CNY")) == "Balance ¥123")
         #expect(UsageBadge.itemText(UsageItem(label: "Balance", remaining: 8.25, unit: "USD")) == "Balance $8.3")
         #expect(UsageBadge.itemText(UsageItem(label: "Tokens", remaining: 1200, unit: "tokens")) == "Tokens 1200 tokens")

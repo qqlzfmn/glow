@@ -62,7 +62,7 @@ final class UsageOfficialProviderTests {
         let items = try AnthropicUsageProvider.parse(body)
         #expect(items.count == 1)
         let item = items[0]
-        #expect(item.label == "Tokens (1d)")
+        #expect(item.label == "1d")
         #expect(item.unit == "tokens")
         #expect(item.usedPercent == nil)
         #expect(item.resetsAt == nil)
@@ -150,7 +150,7 @@ final class UsageOfficialProviderTests {
         let items = try OpenAIUsageProvider.parse(body)
         #expect(items.count == 1)
         let item = items[0]
-        #expect(item.label == "Tokens (1d)")
+        #expect(item.label == "1d")
         #expect(item.unit == "tokens")
         #expect(item.usedPercent == nil)
         #expect(item.resetsAt == nil)

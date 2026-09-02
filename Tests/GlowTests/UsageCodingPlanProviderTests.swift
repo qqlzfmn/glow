@@ -27,10 +27,10 @@ final class UsageCodingPlanProviderTests {
         """)
         let items = try GLMUsageProvider.parse(body)
         #expect(items.count == 2)
-        #expect(items[0].label == "5h window")
+        #expect(items[0].label == "5h")
         #expect(items[0].usedPercent == 1.0)
         #expect(items[0].resetsAt == "2001-09-09T06:46:40Z")
-        #expect(items[1].label == "Weekly")
+        #expect(items[1].label == "1w")
         #expect(items[1].usedPercent == 42.0)
         #expect(items[1].resetsAt == "2001-09-09T02:46:40Z")
     }
@@ -44,7 +44,7 @@ final class UsageCodingPlanProviderTests {
         """)
         let items = try GLMUsageProvider.parse(body)
         #expect(items.count == 1)
-        #expect(items[0].label == "5h window")
+        #expect(items[0].label == "5h")
         #expect(items[0].usedPercent == 2.0)
         #expect(items[0].resetsAt != nil)
     }
@@ -109,10 +109,10 @@ final class UsageCodingPlanProviderTests {
         """)
         let items = try KimiUsageProvider.parse(body)
         #expect(items.count == 2)
-        #expect(items[0].label == "5h window")
+        #expect(items[0].label == "5h")
         #expect(items[0].usedPercent == 60.0)
         #expect(items[0].resetsAt == "2026-08-26T14:12:03Z")
-        #expect(items[1].label == "Weekly")
+        #expect(items[1].label == "1w")
         #expect(items[1].usedPercent == 40.0)
         // Numeric reset time in milliseconds converts to ISO 8601.
         #expect(items[1].resetsAt == "2001-09-09T02:46:40Z")
@@ -139,10 +139,10 @@ final class UsageCodingPlanProviderTests {
         """)
         let items = try MiniMaxUsageProvider.parse(body)
         #expect(items.count == 2)
-        #expect(items[0].label == "5h window")
+        #expect(items[0].label == "5h")
         #expect(items[0].usedPercent == 30.0)
         #expect(items[0].resetsAt == "2001-09-09T02:46:40Z")
-        #expect(items[1].label == "Weekly")
+        #expect(items[1].label == "1w")
         #expect(items[1].usedPercent == 75.0)
         #expect(items[1].resetsAt == "2033-05-18T03:33:20Z")
     }
@@ -156,7 +156,7 @@ final class UsageCodingPlanProviderTests {
         """)
         let items = try MiniMaxUsageProvider.parse(body)
         #expect(items.count == 1)
-        #expect(items[0].label == "5h window")
+        #expect(items[0].label == "5h")
         #expect(items[0].usedPercent == 60.0)
     }
 
@@ -206,12 +206,12 @@ final class UsageCodingPlanProviderTests {
         """)
         let items = try ZenMuxUsageProvider.parse(body)
         #expect(items.count == 2)
-        #expect(items[0].label == "5h window")
+        #expect(items[0].label == "5h")
         #expect(items[0].usedPercent == 25.0)
         #expect(items[0].total == 12.0)
         #expect(items[0].unit == "USD")
         #expect(items[0].resetsAt == "2026-07-21T10:00:00Z")
-        #expect(items[1].label == "Weekly")
+        #expect(items[1].label == "1w")
         #expect(items[1].usedPercent == 10.0)
     }
 
@@ -256,12 +256,12 @@ final class UsageCodingPlanProviderTests {
         """)
         let items = try OpenCodeGoUsageProvider.parse(body)
         #expect(items.count == 3)
-        #expect(items[0].label == "5h window")
+        #expect(items[0].label == "5h")
         #expect(items[0].usedPercent == 37.0)
         #expect(items[0].resetsAt == "2026-08-26T14:12:03.000Z")
-        #expect(items[1].label == "Weekly")
+        #expect(items[1].label == "1w")
         #expect(items[1].usedPercent == 62.0)
-        #expect(items[2].label == "Monthly")
+        #expect(items[2].label == "1m")
         #expect(items[2].usedPercent == 100.0)
     }
 
@@ -286,7 +286,7 @@ final class UsageCodingPlanProviderTests {
         """)
         let items = try OpenCodeGoUsageProvider.parse(body)
         #expect(items.count == 1)
-        #expect(items[0].label == "Weekly")
+        #expect(items[0].label == "1w")
         #expect(items[0].usedPercent == 12.0)
     }
 

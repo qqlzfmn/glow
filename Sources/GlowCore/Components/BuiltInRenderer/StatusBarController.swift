@@ -50,7 +50,7 @@ final class StatusBarController: NSObject {
         menu.addItem(NSMenuItem.separator())
 
         // Install Hooks → per-agent submenu
-        let installMenu = NSMenu()
+        let installMenu = NSMenu(title: "Install Hooks")
         for agent in HookInstaller.Agent.allCases {
             let item = NSMenuItem(
                 title: agent.displayName,
@@ -203,7 +203,6 @@ final class StatusBarController: NSObject {
             isRepeating: def?.isRepeating ?? false,
             flashColor: SIGNAL_DEFINITIONS[state.aggregateSignal]?.color.colorKey ?? "grey"
         )
-        panel?.updateUsage(Self.usageSummaryText())
         panel?.showPanel()
     }
 
@@ -236,19 +235,28 @@ final class StatusBarController: NSObject {
         poller.refresh()
     }
 
+    /// Toggle one agent's hooks: uninstalled → install (checkmark appears),
+    /// installed → uninstall (checkmark removed). Failures alert; success is
+    /// reflected by the checkmark when the menu is next opened.
     @objc private func installHooksForAgent(_ sender: NSMenuItem) {
         guard let raw = sender.representedObject as? String,
               let agent = HookInstaller.Agent(rawValue: raw) else { return }
 
-        let result = HookInstaller.installAgentAndReport(agent)
-        let alert = NSAlert()
-        alert.messageText = "\(agent.displayName) Hooks"
-        alert.informativeText = result.message
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "OK")
-        alert.runModal()
-    }
+        let wasInstalled = HookInstaller.inspectAgent(agent).installed
+        let result = wasInstalled
+            ? HookInstaller.uninstallAgentAndReport(agent)
+            : HookInstaller.installAgentAndReport(agent)
 
+        let succeeded = wasInstalled ? !result.installed : result.installed
+        if !succeeded {
+            let alert = NSAlert()
+            alert.messageText = "\(agent.displayName) Hooks"
+            alert.informativeText = result.message
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+        }
+    }
     @objc private func installHooks() {
         let agents = HookInstaller.Agent.allCases
 
@@ -311,10 +319,20 @@ extension StatusBarController: NSMenuDelegate {
     /// Rebuild the Usage submenu on every open so provider rows always
     /// reflect the latest usage.json snapshot.
     func menuNeedsUpdate(_ menu: NSMenu) {
-        guard menu.title == "Usage", let usageMonitor else { return }
-        menu.removeAllItems()
-        for item in usageMonitor.menuItems() {
-            menu.addItem(item)
+        if menu.title == "Usage" {
+            guard let usageMonitor else { return }
+            menu.removeAllItems()
+            for item in usageMonitor.menuItems() {
+                menu.addItem(item)
+            }
+        } else if menu.title == "Install Hooks" {
+            // Re-inspect on every open so checkmarks mirror on-disk state
+            // even when hooks were changed via CLI or by another process.
+            for item in menu.items {
+                guard let raw = item.representedObject as? String,
+                      let agent = HookInstaller.Agent(rawValue: raw) else { continue }
+                item.state = HookInstaller.inspectAgent(agent).installed ? .on : .off
+            }
         }
     }
 }
@@ -327,14 +345,3 @@ extension StatusBarController {
     }
 }
 
-extension StatusBarController {
-    /// Multi-line usage summary for the detail panel, one provider per line.
-    static func usageSummaryText() -> String {
-        let usage = UsageStore.readUsage()
-        let keys = usage.order ?? usage.providers.keys.sorted()
-        let lines = keys.compactMap { key -> String? in
-            usage.providers[key].map { UsageMonitor.menuTitle(for: $0) }
-        }
-        return lines.joined(separator: "\n")
-    }
-}

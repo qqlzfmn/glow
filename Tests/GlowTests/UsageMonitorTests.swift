@@ -46,7 +46,7 @@ final class UsageMonitorTests {
 
     @Test func pollOnceWritesOkAndErrorStates() async throws {
         let ok = MockProducer(key: "glm", name: "GLM", result: .success([
-            UsageItem(label: "5h window", usedPercent: 12),
+            UsageItem(label: "5h", usedPercent: 12),
         ]))
         let failing = MockProducer(key: "deepseek", name: "DeepSeek", result: .failure(
             UsageHTTPError.httpStatus(401, "auth error")
@@ -66,7 +66,7 @@ final class UsageMonitorTests {
 
     @Test func errorKeepsStaleItemsFromPreviousSuccess() async throws {
         let ok = MockProducer(key: "glm", name: "GLM", result: .success([
-            UsageItem(label: "5h window", usedPercent: 30),
+            UsageItem(label: "5h", usedPercent: 30),
         ]))
         let monitor = UsageMonitor(producers: [ok], pollInterval: 9999)
         await monitor.pollOnce()
@@ -81,14 +81,14 @@ final class UsageMonitorTests {
 
     @Test func menuItemsListProvidersAndRefresh() async throws {
         let ok = MockProducer(key: "glm", name: "GLM Coding Plan", result: .success([
-            UsageItem(label: "5h window", usedPercent: 42),
+            UsageItem(label: "5h", usedPercent: 42),
         ]))
         let monitor = UsageMonitor(producers: [ok], pollInterval: 9999)
         await monitor.pollOnce()
 
         let items = monitor.menuItems()
         let titles = items.compactMap { $0.title.isEmpty ? nil : $0.title }
-        #expect(titles == ["GLM Coding Plan — 5h window 42%", "Refresh Usage"])
+        #expect(titles == ["GLM Coding Plan — 5h 42%", "Refresh Usage"])
         #expect(items.first?.isEnabled == false)
     }
 

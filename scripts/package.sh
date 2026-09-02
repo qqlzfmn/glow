@@ -3,6 +3,9 @@ set -euo pipefail
 
 # ── Paths ──────────────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+RESOURCES_DIR="$SCRIPT_DIR/Resources"
+# Single source of truth for the version: Resources/Info.plist.
+VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$RESOURCES_DIR/Info.plist")"
 BUILD_DIR="$SCRIPT_DIR/.build"
 APP_BUNDLE="$BUILD_DIR/Glow.app"
 PKG_ROOT="$BUILD_DIR/pkg-root"
@@ -23,13 +26,13 @@ echo "==> Step 3: Building component package..."
 pkgbuild \
     --root "$PKG_ROOT" \
     --identifier "com.qqlzfmn.Glow" \
-    --version "0.1.0" \
+    --version "$VERSION" \
     --install-location "/" \
     "$PKG_COMPONENT"
 
 echo ""
 echo "==> Step 4: Building product archive..."
-cat > "$BUILD_DIR/distribution.xml" << 'EOF'
+cat > "$BUILD_DIR/distribution.xml" << EOF
 <?xml version="1.0" encoding="utf-8"?>
 <installer-gui-script minSpecVersion="2">
     <title>Glow</title>
@@ -42,7 +45,7 @@ cat > "$BUILD_DIR/distribution.xml" << 'EOF'
         <pkg-ref id="com.qqlzfmn.Glow"/>
     </choice>
     <pkg-ref id="com.qqlzfmn.Glow"
-             version="0.1.0">Glow-component.pkg</pkg-ref>
+             version="$VERSION">Glow-component.pkg</pkg-ref>
 </installer-gui-script>
 EOF
 

@@ -114,13 +114,21 @@ M2a 交付（数据源：用户选定 API usage 端点路线；展示：灯图�
    Base URL 仅 usesBaseURL 类且 placeholder 显示默认完整端点），保存/删除
    走 `UsageConfigStore` 并触发 `UsageMonitor.refreshNow()` 立即生效，
    窗口 2 秒后自动刷新 Current 行。计划文档：
-   `docs/plans/USAGE_GUI_PLAN.md`（Phase 2 主面板待用户拍板）。
+   `docs/plans/2026-09-02-usage-gui-plan.md`（Phase 2 主面板待用户拍板）。
 7. **UI 细节迭代（用户反馈驱动）**：badge 改为自绘
    `StatusItemBadgeView`（iStat 式两行：值上/标签下，发丝竖线更浅、末段
    无尾线）；窗口标签全称化（5 Hours/1 Week/1 Month）；Usage 菜单 provider
    行可点击钉选徽章（`badge_provider` 持久化）；自动刷新间隔在窗口底部
    输入（`poll_seconds`，循环每轮动态读取）；LSUIElement 隐藏 Edit 菜单
    修复 Cmd+C/V/X/A；`GLOW_HOME` 隔离配置根目录（smoke 不碰真实配置）。
+
+### 发版流程（v0.1.0 首发）
+
+1. 改 `Resources/Info.plist` 的 `CFBundleShortVersionString`（唯一版本事实源，
+   package.sh 经 PlistBuddy 自动读取注入 pkgbuild/distribution）
+2. `bash scripts/package.sh` → `.build/Glow.pkg` + sha256
+3. `git tag -a vX.Y.Z && git push origin vX.Y.Z`
+4. `gh release create vX.Y.Z .build/Glow.pkg .build/Glow.pkg.sha256 --notes-file ...`
 
 ### M2c 候选（按优先级，详见 docs/ROADMAP.md）
 

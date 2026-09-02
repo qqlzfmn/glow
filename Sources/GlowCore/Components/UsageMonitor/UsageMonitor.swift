@@ -92,8 +92,11 @@ final class UsageMonitor: GlowComponent, MenuContributor {
                 )
             }
         }
-        file.providers = providers
-        file.order = producers.map { $0.providerKey }
+        let order = producers.map { $0.providerKey }
+        file.order = order
+        // Drop providers that are no longer discovered (e.g. credentials
+        // removed via usage-config) instead of leaving stale entries.
+        file.providers = providers.filter { order.contains($0.key) }
         do {
             try UsageStore.writeUsage(file)
         } catch {

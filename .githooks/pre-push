@@ -6,7 +6,7 @@ set -euo pipefail
 # docs-only pushes. Uploads Glow.pkg + sha256 checksum.
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
-BUILD_DIR="\$REPO_ROOT/.build"
+BUILD_DIR="$REPO_ROOT/.build"
 PKG="$BUILD_DIR/Glow.pkg"
 
 # stdin: <local ref> <local sha> <remote ref> <remote sha> per pushed ref
@@ -40,13 +40,13 @@ if [ "$changed" -eq 0 ]; then
 fi
 
 echo "==> pre-push: rebuilding package..."
-bash "\$REPO_ROOT/package.sh"
+bash "$REPO_ROOT/package.sh"
 
 # Checksum
 shasum -a 256 "$PKG" | awk '{print $1}' > "$PKG.sha256"
 
 # Version from Info.plist
-VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "\$REPO_ROOT/Resources/Info.plist" 2>/dev/null || echo '0.2.0')"
+VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$REPO_ROOT/Resources/Info.plist" 2>/dev/null || echo '0.1.0')"
 
 # Release notes
 SHORT_SHA="$(git rev-parse --short "$last_local_sha")"

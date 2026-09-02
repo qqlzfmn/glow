@@ -1,0 +1,92 @@
+#!/bin/bash
+set -euo pipefail
+
+# Pre-push hook: rebuild the .pkg and publish to the fixed `nightly` GitHub
+# release when code under the repo root changes. Skipped silently for
+# docs-only pushes. Uploads Glow.pkg + sha256 checksum.
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+BUILD_DIR="\$REPO_ROOT/.build"
+PKG="$BUILD_DIR/Glow.pkg"
+
+# stdin: <local ref> <local sha> <remote ref> <remote sha> per pushed ref
+refs=()
+while read -r local_ref local_sha remote_ref remote_sha; do
+    # 删除型推送（local sha 全 0）与空行直接跳过
+    [ -z "$local_sha" ] && continue
+    [ "$local_sha" = "0000000000000000000000000000000000000000" ] && continue
+    refs+=("$local_ref" "$local_sha" "$remote_ref" "$remote_sha")
+done
+
+changed=0
+last_local_sha=""
+for ((i = 0; i < ${#refs[@]}; i += 4)); do
+    local_sha="${refs[i + 1]}"
+    remote_sha="${refs[i + 3]}"
+    if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
+        files="$(git diff --name-only "$(git hash-object -t tree /dev/null)" "$local_sha")"
+    else
+        files="$(git diff --name-only "$remote_sha" "$local_sha")"
+    fi
+    if echo "$files" | grep -qE '^(Sources/|Tests/|Resources/|Package\.swift|build\.sh|package\.sh)'; then
+        changed=1
+        last_local_sha="$local_sha"
+    fi
+done
+
+if [ "$changed" -eq 0 ]; then
+    echo "pre-push: no code changes, skipping package"
+    exit 0
+fi
+
+echo "==> pre-push: rebuilding package..."
+bash "\$REPO_ROOT/package.sh"
+
+# Checksum
+shasum -a 256 "$PKG" | awk '{print $1}' > "$PKG.sha256"
+
+# Version from Info.plist
+VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "\$REPO_ROOT/Resources/Info.plist" 2>/dev/null || echo '0.2.0')"
+
+# Release notes
+SHORT_SHA="$(git rev-parse --short "$last_local_sha")"
+BUILD_TIME="$(date -u +'%Y-%m-%d %H:%M UTC')"
+CHANGES="$(git log --format='- %h %s' --no-merges -10 "$last_local_sha" 2>/dev/null | head -20)"
+
+NOTES_FILE="$(mktemp)"
+cat > "$NOTES_FILE" <<EOF
+## Nightly Build
+
+自动构建 · $BUILD_TIME · commit \`$SHORT_SHA\` · 版本 $VERSION
+
+### Changes
+$CHANGES
+
+### Install
+1. 下载 \`Glow.pkg\`
+2. 双击安装；若被 Gatekeeper 拦截：右键 → 打开（或 \`sudo installer -pkg Glow.pkg -target /\`）
+3. 首次启动自动配置 launchd 开机自启
+
+### Requirements
+- macOS 13.0+，Apple Silicon (arm64)
+
+### Usage
+菜单栏右键 → Install Hooks 子菜单，按 agent 安装（Codex / Claude Code / omp / pi）
+完整文档：https://github.com/qqlzfmn/glow
+
+### Note
+- Nightly 自动构建，未签名（无 Developer ID 证书）
+- 资产固定同名，始终指向最新构建
+EOF
+
+echo "==> pre-push: publishing to nightly release..."
+if gh release view nightly >/dev/null 2>&1; then
+    gh release upload nightly "$PKG" "$PKG.sha256" --clobber
+    gh release edit nightly --notes-file "$NOTES_FILE"
+else
+    gh release create nightly "$PKG" "$PKG.sha256" \
+        --title "Nightly" --notes-file "$NOTES_FILE" --target "$last_local_sha"
+fi
+rm -f "$NOTES_FILE"
+
+echo "==> pre-push: done"

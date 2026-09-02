@@ -1,0 +1,12 @@
+# SwiftPM build artifacts
+.build/
+.swiftpm/
+
+# Packaging intermediates
+dist/
+
+# Local machine files
+.DS_Store
+*.log
+.env
+.env.*

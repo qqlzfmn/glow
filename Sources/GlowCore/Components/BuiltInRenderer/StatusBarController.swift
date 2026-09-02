@@ -9,6 +9,8 @@ final class StatusBarController: NSObject {
     private var flashTimer: Timer?
 
     private weak var usageMonitor: UsageMonitor?
+    /// Host-injected: opens the Provider Settings window.
+    var openProviderSettings: (() -> Void)?
     private var usageBadgeText: String = ""
     private var signalStartedAt: TimeInterval = 0
     private var isFlashing: Bool = false
@@ -291,6 +293,13 @@ extension StatusBarController: NSMenuDelegate {
             for item in usageMonitor.menuItems() {
                 menu.addItem(item)
             }
+            let configure = NSMenuItem(
+                title: "Configure Providers…",
+                action: #selector(openProviderSettingsClicked),
+                keyEquivalent: ""
+            )
+            configure.target = self
+            menu.addItem(configure)
         } else if menu.title == "Install Hooks" {
             // Re-inspect on every open so checkmarks mirror on-disk state
             // even when hooks were changed via CLI or by another process.
@@ -300,6 +309,10 @@ extension StatusBarController: NSMenuDelegate {
                 item.state = HookInstaller.inspectAgent(agent).installed ? .on : .off
             }
         }
+    }
+
+    @objc private func openProviderSettingsClicked() {
+        openProviderSettings?()
     }
 }
 

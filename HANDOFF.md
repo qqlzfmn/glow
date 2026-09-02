@@ -107,6 +107,12 @@ M2a 交付（数据源：用户选定 API usage 端点路线；展示：灯图�
 5. **配置可用性**：`usage-config` CLI（list/add/remove 交互向导，0600 配置
    文件）+ 菜单 "Configure Providers…" 入口 + 每轮轮询动态重新发现（配置
    改动免重启生效）。
+6. **Provider Settings 窗口（GUI，Phase 1）**：菜单 "Configure Providers…"
+   打开双栏配置窗口（`ProviderSettingsWindow.swift`）——左列 14 个类型带
+   configured/auto/— 状态徽章，右侧按 `UsageKinds` 动态生成凭据表单
+   （secret 字段 NSSecureTextField），保存/删除走 `UsageConfigStore` 并触发
+   `UsageMonitor.refreshNow()` 立即生效。计划文档：
+   `docs/plans/USAGE_GUI_PLAN.md`（Phase 2 主面板待用户拍板）。
 
 ### M2c 候选（按优先级，详见 docs/ROADMAP.md）
 

@@ -31,8 +31,12 @@ final class VolcengineUsageProvider: UsageProducer {
     // MARK: - UsageProducer
 
     func fetch() async throws -> [UsageItem] {
-        guard let accessKey = config.extra["access_key_id"], !accessKey.isEmpty,
-              let secretKey = config.extra["secret_access_key"], !secretKey.isEmpty else {
+        // CLI/GUI store the first prompt in the `token` slot; for this
+        // provider that is the AccessKey ID. `extra` remains the explicit
+        // two-key shape for hand-written configs.
+        let accessKey = config.extra["access_key_id"] ?? config.token
+        let secretKey = config.extra["secret_access_key"]
+        guard !accessKey.isEmpty, let secretKey, !secretKey.isEmpty else {
             throw UsageParseError.unexpectedShape(
                 "volcengine: needs access_key_id and secret_access_key in the config"
             )

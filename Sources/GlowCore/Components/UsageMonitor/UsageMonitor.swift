@@ -128,20 +128,15 @@ final class UsageMonitor: GlowComponent, MenuContributor {
             items.append(NSMenuItem.separator())
         }
         items.append(Self.actionItem("Refresh Usage", action: #selector(refreshNow), target: self))
-        items.append(Self.actionItem("Configure Providers…", action: #selector(openConfiguration), target: self))
         return items
     }
 
     // MARK: - Actions
 
-    @objc private func refreshNow() {
+    /// Re-discover producers and fetch immediately. Invoked by the menu's
+    /// Refresh Usage and by the Provider Settings window after saving.
+    @objc func refreshNow() {
         Task { await pollOnce() }
-    }
-
-    /// Open (creating if needed) the explicit provider config file in the
-    /// user's default editor. Changes apply on the next poll cycle.
-    @objc private func openConfiguration() {
-        NSWorkspace.shared.open(URL(fileURLWithPath: UsageConfigStore.ensureConfigFile()))
     }
 
     // MARK: - Helpers

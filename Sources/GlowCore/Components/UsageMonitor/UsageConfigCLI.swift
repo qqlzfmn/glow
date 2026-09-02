@@ -9,44 +9,9 @@ import Foundation
 ///
 /// Auto-discovered providers (claude env block, opencode auth.json) are shown
 /// in `list` but cannot be edited here — they come from the agent configs.
+/// The provider-type registry is shared with the Provider Settings window
+/// (`UsageKinds.all`).
 enum UsageConfigCLI {
-
-    /// One supported provider type and the credential fields it needs.
-    struct Kind {
-        let type: String
-        let displayName: String
-        /// Fields prompted in order; the first is always stored as `token`.
-        let prompts: [(key: String, prompt: String)]
-    }
-
-    /// Registry for `add`. Keys mirror `UsageConfig.explicitProvider`.
-    static let kinds: [Kind] = [
-        Kind(type: "glm", displayName: "GLM Coding Plan", prompts: [("token", "API token")]),
-        Kind(type: "zhipu-team", displayName: "GLM Team Plan", prompts: [
-            ("token", "API key"), ("organization_id", "Organization ID"), ("project_id", "Project ID"),
-        ]),
-        Kind(type: "volcengine", displayName: "Volcengine Ark", prompts: [
-            ("access_key_id", "AccessKey ID"), ("secret_access_key", "Secret Access Key"),
-        ]),
-        Kind(type: "kimi", displayName: "Kimi For Coding", prompts: [("token", "API token")]),
-        Kind(type: "minimax", displayName: "MiniMax Coding Plan", prompts: [("token", "API token")]),
-        Kind(type: "zenmux", displayName: "ZenMux", prompts: [("token", "API token")]),
-        Kind(type: "opencode-go", displayName: "OpenCode Go", prompts: [("token", "API token")]),
-        Kind(type: "deepseek", displayName: "DeepSeek", prompts: [("token", "API key (sk-...)")]),
-        Kind(type: "openrouter", displayName: "OpenRouter", prompts: [("token", "API key (sk-or-...)")]),
-        Kind(type: "siliconflow", displayName: "SiliconFlow", prompts: [("token", "API token")]),
-        Kind(type: "stepfun", displayName: "StepFun", prompts: [("token", "API token")]),
-        Kind(type: "anthropic", displayName: "Anthropic Usage", prompts: [
-            ("token", "Admin API key (sk-ant-admin...; org admin required)"),
-        ]),
-        Kind(type: "openai", displayName: "OpenAI Usage", prompts: [
-            ("token", "Organization admin/owner key"),
-        ]),
-        Kind(type: "new-api", displayName: "New API gateway", prompts: [
-            ("token", "System access token"),
-            ("user_id", "User ID (new-api requires the New-Api-User header)"),
-        ]),
-    ]
 
     static func run(_ args: [String]) -> Int32 {
         let sub = args.count >= 2 ? args[1] : ""
@@ -70,26 +35,23 @@ enum UsageConfigCLI {
     // MARK: - list
 
     private static func list() -> Int32 {
-        let configured = UsageConfigStore.load()
-        let configuredKeys = Set(configured.map { $0.providerKey })
+        let configuredKeys = Set(UsageConfigStore.load().map { $0.providerKey })
         let autoDetected = Set(
             UsageConfig.discoverProviders(home: NSHomeDirectory()).map { $0.providerKey }
         )
 
-        print("Usage providers (configured in \(UsageConfigStore.configFile)):")
+        print("Usage providers (configured in \(UsageConfigStore.configFile())):")
         print("")
-        for (index, kind) in kinds.enumerated() {
-            let key = kind.type
+        for kind in UsageKinds.all {
             let state: String
-            if configuredKeys.contains(key) {
+            if configuredKeys.contains(kind.type) {
                 state = "configured"
-            } else if autoDetected.contains(key) {
+            } else if autoDetected.contains(kind.type) {
                 state = "auto-discovered (from agent config)"
             } else {
                 state = "not configured"
             }
             print("  \(kind.displayName) [\(kind.type)]: \(state)")
-            _ = index
         }
         print("")
         print("Add:    glow usage-config add [type]")
@@ -100,27 +62,27 @@ enum UsageConfigCLI {
     // MARK: - add
 
     private static func add(selected type: String?) -> Int32 {
-        let kind: Kind
+        let kind: UsageProviderKind
         if let type {
-            guard let resolved = kinds.first(where: { $0.type == type.lowercased() }) else {
+            guard let resolved = UsageKinds.kind(forType: type) else {
                 fputs("glow: unknown provider type \(type)\n", stderr)
                 return 2
             }
             kind = resolved
         } else {
             print("Select provider type:")
-            for (index, candidate) in kinds.enumerated() {
+            for (index, candidate) in UsageKinds.all.enumerated() {
                 print("  \(index + 1). \(candidate.displayName) [\(candidate.type)]")
             }
             guard let answer = prompt("Type number or key: "), !answer.isEmpty else {
                 print("Aborted.")
                 return 0
             }
-            let resolved: Kind?
-            if let index = Int(answer), index >= 1, index <= kinds.count {
-                resolved = kinds[index - 1]
+            let resolved: UsageProviderKind?
+            if let index = Int(answer), index >= 1, index <= UsageKinds.all.count {
+                resolved = UsageKinds.all[index - 1]
             } else {
-                resolved = kinds.first { $0.type == answer.lowercased() }
+                resolved = UsageKinds.kind(forType: answer)
             }
             guard let chosen = resolved else {
                 fputs("glow: unknown provider type \(answer)\n", stderr)
@@ -157,7 +119,7 @@ enum UsageConfigCLI {
         do {
             try UsageConfigStore.upsert(config)
         } catch {
-            fputs("glow: cannot write \(UsageConfigStore.configFile): \(error)\n", stderr)
+            fputs("glow: cannot write \(UsageConfigStore.configFile()): \(error)\n", stderr)
             return 1
         }
         print("Saved \(kind.displayName). It appears in the menu on the next poll.")
@@ -167,19 +129,19 @@ enum UsageConfigCLI {
     // MARK: - remove
 
     private static func remove(type: String) -> Int32 {
-        guard let (key, name) = UsageConfig.explicitProvider(forType: type) else {
+        guard let kind = UsageKinds.kind(forType: type) else {
             fputs("glow: unknown provider type \(type)\n", stderr)
             return 2
         }
         do {
-            if try UsageConfigStore.remove(providerKey: key) {
-                print("Removed \(name).")
+            if try UsageConfigStore.remove(providerKey: kind.type) {
+                print("Removed \(kind.displayName).")
                 return 0
             }
-            print("\(name) was not configured in the explicit config.")
+            print("\(kind.displayName) was not configured in the explicit config.")
             return 0
         } catch {
-            fputs("glow: cannot update \(UsageConfigStore.configFile): \(error)\n", stderr)
+            fputs("glow: cannot update \(UsageConfigStore.configFile()): \(error)\n", stderr)
             return 1
         }
     }

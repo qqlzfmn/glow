@@ -339,8 +339,11 @@ protocol MenuContributor: AnyObject {
   `~/.local/share/opencode/auth.json` 识别 `zhipuai-coding-plan`。
 - 显式配置 `~/.config/glow/usage.json`（0600）覆盖同名自动发现：
   `{"providers": [{"type": "new-api", "token": "...", "base_url": "https://...", "user_id": "1"}]}`。
-- **配置向导**：`glow usage-config [list|add [type]|remove <type>]`——交互式
-  添加/移除，无需手写 JSON；菜单 "Configure Providers…" 直接打开配置文件。
+- **配置 GUI/CLI**：菜单 "Configure Providers…" 打开 Provider Settings
+  窗口（双栏：左列全部 14 个类型及状态 configured/auto/—，右侧按类型动态
+  生成凭据表单，secret 字段密码框显示；保存后立即重新拉取）。CLI 侧
+  `glow usage-config [list|add [type]|remove <type>]` 共用同一份类型注册表
+  （`UsageKinds`）与存储（`UsageConfigStore`，0600）。
 - 每次轮询前重新发现，配置改动无需重启 app。
 
 CLI 子命令 `usage` 打印 usage.json 全文（JSON）。

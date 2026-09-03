@@ -69,6 +69,10 @@ open .build/Glow.app                      # 启动
 
 > 按"用量付费"计费的 provider 显示余额（可自定义货币符号），订阅套餐类显示配额窗口百分比（5 Hours / 1 Week / 1 Month）。
 
+<p align="center">
+  <img src="assets/screenshot/Glow-Menu-Usage.png" width="320" alt="Usage menu">
+</p>
+
 配置方式（二选一）：
 
 ```bash
@@ -106,6 +110,12 @@ $APP uninstall-hooks --all -y         # 卸载全部 Agent 的 Glow hooks（对�
 卸载用 `uninstall-hooks`（参数与 install 一致，同样幂等、带时间戳备份、保留第三方 hook）：`$APP uninstall-hooks --all -y`，也可用 `--agent` 指定单个 Agent 或 `--dry-run` 预览。
 
 omp 与 pi 的安装方式不同：它们没有 JSON 配置，安装会把内置的 hook 扩展模板（`Resources/glow-hook-template.ts`）复制到用户级扩展目录（`~/.omp/agent/extensions/` 与 `~/.pi/agent/extensions/`），之后启动 agent 即自动加载、零参数联动状态灯。
+
+<p align="center">
+  <img src="assets/screenshot/Glow-Menu-Hooks.png" width="300" alt="Install Hooks menu">
+</p>
+
+菜单里的单个 Agent 是开关式：未安装点击即装（打 ✓），已安装点击即卸（去 ✓）；✓ 状态在每次展开菜单时重新检查。
 
 ## Codex 集成
 

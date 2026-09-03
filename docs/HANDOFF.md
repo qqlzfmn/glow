@@ -129,6 +129,7 @@ M2a 交付（数据源：用户选定 API usage 端点路线；展示：灯图�
 2. `bash scripts/package.sh` → `.build/Glow.pkg` + sha256
 3. `git tag -a vX.Y.Z && git push origin vX.Y.Z`
 4. `gh release create vX.Y.Z .build/Glow.pkg .build/Glow.pkg.sha256 --notes-file ...`
+   （release 标题只写版本号 `vX.Y.Z`，不带项目名——gh 默认即 tag 名）
 
 ### M2c 候选（按优先级，详见 docs/ROADMAP.md）
 

@@ -89,6 +89,9 @@ $APP usage-config remove deepseek  # 移除
 - 自动刷新间隔：设置窗口底部的 "Auto refresh (min)"。
 - 所有 provider 都来自显式配置（`~/.config/glow/usage.json`，0600），不会被 agent 配置隐式启用。
 
+<p align="center">
+  <img src="assets/screenshot/Glow-Provider-New-API.png" width="420" alt="New API gateway settings"><img src="assets/screenshot/Glow-Provider-OpenCode-Go.png" width="420" alt="OpenCode Go settings">
+</p>
 
 ### Hook 安装
 

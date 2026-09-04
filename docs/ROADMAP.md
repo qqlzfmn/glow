@@ -47,6 +47,8 @@ Glow 是 AI 编程助手的菜单栏环境状态面板，从"agent 状态灯"演
 - 用量数据与灯语体系的关系：当前独立（usage.json 与 sessions.json 分离，
   badge 只加文本不换灯色）；是否引入"配额耗尽 → 黄灯"类联动待定。
 - 官方 API 的金额/成本口径（Anthropic cost report 端点是否纳入）。
+- 菜单栏 badge 外观自定义：设置页（Usage Providers 窗口）支持调整字体大小、
+  行间距、颜色（数值/小标签/竖线）等渲染参数，替代硬编码。
 - 插件化拆分：组件协议转 public、拆独立 target 的时机。
 
 ## 备注

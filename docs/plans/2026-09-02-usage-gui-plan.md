@@ -1,6 +1,9 @@
 # Usage Provider 配置 GUI 计划
 
-> 状态：待用户批准。批准后按 Phase 1 → （可选）Phase 2 实施。
+> 状态：Phase 1 已交付（Provider 配置窗口）。Phase 2 原案（popover 主面板）已被
+> 2026-09-04 用户新决议取代：设置窗口升级为 **App 级分区式**（App / 外观 /
+> Provider / Hooks 四区，侧边栏切换），入口提级为菜单顶层 Settings…。
+> 本文保留作历史参考，不再按原 Phase 2 实施。
 
 ## 结论
 

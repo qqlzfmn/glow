@@ -39,6 +39,11 @@ Glow 是 AI 编程助手的菜单栏环境状态面板，从"agent 状态灯"演
   （深浅色自适应），Reset 一键还原。详情面板已移除。
 - 后续批次（按优先级）：本地会话日志 token 统计（Claude JSONL / Codex
   rollout / opencode，参照 cc-switch `session_usage_*.rs` 口径）→ Session Stats 面板。
+- **设置页重构（2026-09-04 决议，取代原 popover 主面板案）**：设置窗口升级为
+  App 级——侧边栏四分区（App：开机自启/轮询间隔；外观：badge 外观；
+  Provider：凭据配置；Hooks：agent 开关），入口从 Usage 子菜单提级为菜单
+  顶层 Settings…。计划：`docs/plans/2026-09-04-app-settings-window-plan.md`
+  （待批准实施）。
 
 ## 待定项（后续细化）
 

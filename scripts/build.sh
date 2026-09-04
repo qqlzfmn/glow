@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
+# Optional target arch (e.g. `bash build.sh x86_64`); empty = native build.
+ARCH="${1:-}"
+
 SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 RESOURCES_DIR="$SCRIPT_DIR/Resources"
 BUILD_DIR="$SCRIPT_DIR/.build"
@@ -11,8 +14,8 @@ echo "==> Building Glow (SwiftPM)..."
 cd "$SCRIPT_DIR"
 
 # Compile via SwiftPM (release).
-BIN_PATH="$(swift build -c release --show-bin-path)"
-swift build -c release
+BIN_PATH="$(swift build -c release ${ARCH:+--arch "$ARCH"} --show-bin-path)"
+swift build -c release ${ARCH:+--arch "$ARCH"}
 
 # Assemble .app bundle (SwiftPM also uses .build/, so only touch the bundle).
 rm -rf "$APP_BUNDLE"

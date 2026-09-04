@@ -65,6 +65,9 @@ final class BadgeAppearanceControls: NSView {
         ])
         row.orientation = .horizontal
         row.spacing = 10
+        // Allow the strip to compress below its intrinsic width (the
+        // settings Appearance pane is narrower than the old window strip).
+        row.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         row.translatesAutoresizingMaskIntoConstraints = false
         addSubview(row)
         NSLayoutConstraint.activate([

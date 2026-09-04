@@ -27,22 +27,33 @@ final class AppearanceSettingsPane: NSView, SettingsPane {
             color: .secondaryLabelColor
         )
         let controls = BadgeAppearanceControls(frame: .zero)
-        // Autoresizing-mask constraints from the initial frame fight the
-        // explicit constraints below (same lesson as the old window).
+        // Not inside a stack: like the old window, pin it directly so its
+        // intrinsic strip width cannot propagate up and stretch the window.
         controls.translatesAutoresizingMaskIntoConstraints = false
+        // No intrinsic height (plain NSView): pin it, like the old window did.
+        controls.heightAnchor.constraint(equalToConstant: 44).isActive = true
         controls.onApply = { [weak self] in self?.onBadgeChange() }
         badgeControls = controls
 
-        let stack = NSStackView(views: [title, hint, controls])
-        stack.orientation = .vertical
-        stack.alignment = .leading
-        stack.spacing = 12
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(stack)
+        addSubview(title)
+        addSubview(hint)
+        addSubview(controls)
+        // Directly-added subviews default to autoresizing translation, whose
+        // generated pin-at-origin constraints override the anchors below.
+        for view in [title, hint] {
+            view.translatesAutoresizingMaskIntoConstraints = false
+        }
         NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: topAnchor, constant: 4),
-            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4),
-            stack.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -4),
+            title.topAnchor.constraint(equalTo: topAnchor, constant: 4),
+            title.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4),
+
+            hint.topAnchor.constraint(equalTo: title.bottomAnchor, constant: 8),
+            hint.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4),
+            hint.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -4),
+
+            controls.topAnchor.constraint(equalTo: hint.bottomAnchor, constant: 16),
+            controls.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4),
+            controls.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -4),
         ])
     }
 

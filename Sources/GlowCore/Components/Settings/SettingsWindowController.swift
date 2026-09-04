@@ -32,6 +32,7 @@ final class SettingsWindowController: NSWindowController {
         window.title = "Glow Settings"
         window.isReleasedWhenClosed = false
         super.init(window: window)
+        window.center()
         setupContent(onRefresh: onRefresh, onBadgeChange: onBadgeChange)
         selectPane(at: 0)
     }
@@ -56,7 +57,7 @@ final class SettingsWindowController: NSWindowController {
     // MARK: - Layout
 
     private func setupContent(onRefresh: @escaping () -> Void, onBadgeChange: @escaping () -> Void) {
-        guard let content = window?.contentView else { return }
+        guard let window = self.window, let content = window.contentView else { return }
 
         panes = [
             AppSettingsPane(),
@@ -68,19 +69,12 @@ final class SettingsWindowController: NSWindowController {
         let sidebar = NSStackView()
         sidebar.orientation = .vertical
         sidebar.alignment = .leading
-        sidebar.spacing = 6
+        sidebar.spacing = 4
         sidebar.edgeInsets = NSEdgeInsets(top: 12, left: 0, bottom: 12, right: 0)
         for (index, pane) in panes.enumerated() {
-            let button = NSButton(
-                title: pane.paneTitle,
-                target: self,
-                action: #selector(sidebarClicked(_:))
+            let button = self.sidebarButton(
+                title: pane.paneTitle, tag: index
             )
-            button.bezelStyle = .texturedRounded
-            button.tag = index
-            button.widthAnchor.constraint(
-                equalToConstant: Self.sidebarWidth - 16
-            ).isActive = true
             sidebar.addArrangedSubview(button)
             sidebarButtons.append(button)
         }
@@ -112,9 +106,37 @@ final class SettingsWindowController: NSWindowController {
                 pane.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -12),
             ])
         }
+
+        // Pin the content size: pane constraints must solve INSIDE the
+        // fixed window, never push it around (without this the layout
+        // engine resized the content to pane fitting sizes).
+        window.styleMask.remove(.resizable)
+        NSLayoutConstraint.activate([
+            content.widthAnchor.constraint(equalToConstant: 640),
+            content.heightAnchor.constraint(equalToConstant: 480),
+        ])
     }
 
     // MARK: - Switching
+
+    /// Borderless, layer-backed sidebar entry; the selected entry gets an
+    /// accent-filled rounded background (texturedRounded's tint proved
+    /// indistinguishable from unselected entries on a dark menu bar app).
+    private func sidebarButton(title: String, tag: Int) -> NSButton {
+        let button = NSButton(
+            title: title,
+            target: self,
+            action: #selector(sidebarClicked(_:))
+        )
+        button.isBordered = false
+        button.tag = tag
+        button.wantsLayer = true
+        button.layer?.cornerRadius = 6
+        button.contentTintColor = .labelColor
+        button.widthAnchor.constraint(equalToConstant: Self.sidebarWidth - 16).isActive = true
+        button.heightAnchor.constraint(equalToConstant: 28).isActive = true
+        return button
+    }
 
     @objc private func sidebarClicked(_ sender: NSButton) {
         selectPane(at: sender.tag)
@@ -123,10 +145,32 @@ final class SettingsWindowController: NSWindowController {
     private func selectPane(at index: Int) {
         guard index < panes.count else { return }
         for (i, pane) in panes.enumerated() {
-            pane.isHidden = i != index
+            let showing = i == index
+            pane.isHidden = !showing
+            // Hidden subtrees are skipped by the layout engine; a pane that
+            // was never laid out keeps stale frames when first shown.
+            if showing {
+                pane.needsLayout = true
+                pane.layoutSubtreeIfNeeded()
+            }
         }
         for (i, button) in sidebarButtons.enumerated() {
-            button.contentTintColor = i == index ? .controlAccentColor : .labelColor
+            let selected = i == index
+            button.layer?.backgroundColor = selected
+                ? NSColor.controlAccentColor.cgColor
+                : NSColor.clear.cgColor
+            button.contentTintColor = selected ? .controlAccentColor : .labelColor
+            // Accent background needs white text for contrast; unselected
+            // entries keep the adaptive label color.
+            button.attributedTitle = NSAttributedString(
+                string: button.title,
+                attributes: [
+                    .foregroundColor: selected
+                        ? NSColor.white
+                        : NSColor.labelColor,
+                    .font: NSFont.systemFont(ofSize: 13),
+                ]
+            )
         }
         panes[index].paneWillAppear()
     }

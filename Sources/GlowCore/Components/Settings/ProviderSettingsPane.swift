@@ -149,7 +149,7 @@ final class ProviderSettingsPane: NSView, SettingsPane {
             listScrollView.bottomAnchor.constraint(
                 equalTo: buttonRow.topAnchor, constant: -12
             ),
-            listScrollView.widthAnchor.constraint(equalToConstant: 210),
+            listScrollView.widthAnchor.constraint(equalToConstant: 170),
 
             detailScroll.topAnchor.constraint(equalTo: topAnchor),
             detailScroll.leadingAnchor.constraint(
@@ -290,21 +290,23 @@ final class ProviderSettingsPane: NSView, SettingsPane {
         }
     }
 
+    /// Vertical row: caption above, field below. The detail column is
+    /// ~284pt wide, so the old horizontal 170+240 row could never fit and
+    /// stretched the window; stacked rows fit a fixed 240pt field cleanly.
     private func makeFieldRow(label: String, field: NSTextField) -> NSView {
         let text = makeSettingsLabel(label, color: .secondaryLabelColor)
-        text.widthAnchor.constraint(equalToConstant: 170).isActive = true
-        text.alignment = .right
         field.widthAnchor.constraint(equalToConstant: 240).isActive = true
         let row = NSStackView(views: [text, field])
-        row.orientation = .horizontal
-        row.spacing = 8
+        row.orientation = .vertical
+        row.alignment = .leading
+        row.spacing = 2
         return row
     }
 
     private func makeSeparator() -> NSView {
         let separator = NSBox()
         separator.boxType = .separator
-        separator.widthAnchor.constraint(equalToConstant: 280).isActive = true
+        separator.widthAnchor.constraint(equalToConstant: 240).isActive = true
         return separator
     }
 

@@ -11,10 +11,13 @@ Glow 是 macOS 菜单栏的 AI 编程助手环境状态面板：Agent（Codex / 
 
 ## 当前状态快照
 
-- 测试：157 个 Swift Testing 测试 / 19 套件，全绿（`StateDirEnvLock` 见下方陷阱）
+- 测试：177 个 Swift Testing 测试 / 23 套件，全绿（`StateDirEnvLock` 见下方陷阱）
 - 结构：仓库根 SPM 包（`Sources/GlowCore/{Kernel,Components}` + `Sources/Glow` 薄入口 + `Tests/GlowTests`）
-- M2a 已完成：provider-usage（详见下方 M2 节与 docs/PLUGINS.md）
-- 已发布：nightly release（pre-push hook 自动构建上传）；本机 `/Applications/Glow.app` 运行中，launchd `com.qqlzfmn.glow.app` 自启
+- M2a/M2b 已完成：provider-usage + badge 外观自定义（详见下方 M2 节与 docs/PLUGINS.md）
+- 已发布：v0.1.3（arm64 + x86_64 双架构）；nightly release 双架构自动构建上传
+  （pre-push hook）；本机 `/Applications/Glow.app` 运行中，launchd
+  `com.qqlzfmn.glow.app` 自启
+- 设置页 App 级重构：**计划完备、暂缓执行**（`docs/plans/2026-09-04-app-settings-window-plan.md`）
 - 本机 hooks 已切换到 Glow（`~/.codex/hooks.json` 7 事件 + `~/.claude/settings.json` 12 事件 + omp/pi 模板），**orca 第三方 hook 必须永远保留**（`~/.orca/agent-hooks/` 调用）
 - 旧仓库 qqlzfmn/vibecoding-signal-light 已 Archived，只读，勿动
 
@@ -68,6 +71,9 @@ Producer（AgentMonitor 等，产生事件，禁碰 UI）
 | c82482d | M1：Kernel/Components 骨架 + uninstall-hooks（幂等可还原）+ PLUGINS.md 骨架版，74 测试 |
 | 84c4222 | docs: HANDOFF 交接文档 |
 | f1035cb | M2a：**Usage Monitor**——组件协议落地（GlowComponent/UsageProducer/MenuContributor）+ usage.json 契约（flock 共享 StateFileLock）+ 11 个 provider Producer（GLM/Kimi/MiniMax/ZenMux/OpenCodeGo 配额，DeepSeek/OpenRouter/SiliconFlow/StepFun 余额，Anthropic/OpenAI 官方 usage）+ 凭据三路自动发现 + 菜单栏 badge + Usage 菜单/详情面板区块 + `usage` CLI，134 测试。端点口径源自 cc-switch `coding_plan.rs`/`balance.rs`（用户指定参考）与官方文档实证 |
+| 507437f | **Badge 外观自定义**——usage.json `badge` 对象（BadgeAppearance：字号/行距/三色 hex，写入即钳制）+ 设置窗口 Badge 区（BadgeAppearanceControls，未触碰颜色保持系统动态色）+ `onBadgeChange` 即时重绘，169 测试；2363f5e 修复其 TAMIC 约束冲突挤掉 poll 行（新增 ProviderSettingsWindowLayoutTests），177 测试 |
+| 27cd5e6 | **双架构发布**——build/package.sh 支持 arch 参数；nightly pre-push 双架构上传（Glow-arm64/Glow-x86_64）+ 触发正则补 scripts/、.githooks/（旧正则自脚本搬家后失配）；正式版 v0.1.3 首发 x86_64 包 |
+| — | 设置页 App 级重构：决议 + 完整计划后**用户暂缓**（docs/plans/2026-09-04-app-settings-window-plan.md），恢复按计划执行顺序开工 |
 
 重构方法论（沿用即可）：每阶段 subagent 实现 → 主会话独立验收（swift test + smoke + grep 残留）→ 原子 commit → push。
 
@@ -126,15 +132,18 @@ M2a 交付（数据源：用户选定 API usage 端点路线；展示：灯图�
    钳制）；Provider Settings 窗口底部 Badge 区（`BadgeAppearanceControls`，
    只写用户触碰过的字段——未触碰的颜色井保持系统动态色以自适应深浅
    菜单栏，Reset 清空为 nil）；`StatusBarController.updateUsageBadge()` 每
-   次更新动态读取，设置改动经 `onBadgeChange` 回调立即重绘、无需等轮询。
-
-### 发版流程（v0.1.0 首发）
+### 发版流程（v0.1.3 起双架构）
 
 1. 改 `Resources/Info.plist` 的 `CFBundleShortVersionString`（唯一版本事实源，
-   package.sh 经 PlistBuddy 自动读取注入 pkgbuild/distribution）
-2. `bash scripts/package.sh` → `.build/Glow.pkg` + sha256
+   package.sh 经 PlistBuddy 自动读取注入 pkgbuild/distribution；注意 PlistBuddy
+   会把键重排为字母序，属正常现象，`plutil -lint` 通过即可）
+2. 双架构打包：`bash scripts/package.sh` → `.build/Glow.pkg`（arm64），
+   再 `bash scripts/package.sh x86_64` → `.build/Glow-x86_64.pkg`
 3. `git tag -a vX.Y.Z && git push origin vX.Y.Z`
-4. `gh release create vX.Y.Z .build/Glow.pkg .build/Glow.pkg.sha256 --notes-file ...`
+4. 上传前把 arm64 产物改名对齐：`cp .build/Glow.pkg Glow-arm64.pkg`，
+   两包各生成 `shasum -a 256`，然后
+   `gh release create vX.Y.Z Glow-arm64.pkg Glow-arm64.pkg.sha256
+   Glow-x86_64.pkg Glow-x86_64.pkg.sha256 --title "vX.Y.Z" --notes-file ...`
    （release 标题只写版本号 `vX.Y.Z`，不带项目名——gh 默认即 tag 名）
 
 ### M2c 候选（按优先级，详见 docs/ROADMAP.md）

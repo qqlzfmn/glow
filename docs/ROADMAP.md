@@ -1,6 +1,7 @@
 # Roadmap
 
-> 愿景记录（2026-08-10，2026-09-02 / 2026-09-04 更新）。细节待后续细化，先占位跟踪。
+> 愿景记录（2026-08-10，2026-09-02 / 2026-09-04 更新；2026-09-04 收尾归档）。
+> 细节待后续细化，先占位跟踪。
 
 ## 愿景
 
@@ -39,11 +40,12 @@ Glow 是 AI 编程助手的菜单栏环境状态面板，从"agent 状态灯"演
   （深浅色自适应），Reset 一键还原。详情面板已移除。
 - 后续批次（按优先级）：本地会话日志 token 统计（Claude JSONL / Codex
   rollout / opencode，参照 cc-switch `session_usage_*.rs` 口径）→ Session Stats 面板。
-- **设置页重构（2026-09-04 决议，取代原 popover 主面板案）**：设置窗口升级为
-  App 级——侧边栏四分区（App：开机自启/轮询间隔；外观：badge 外观；
-  Provider：凭据配置；Hooks：agent 开关），入口从 Usage 子菜单提级为菜单
-  顶层 Settings…。计划：`docs/plans/2026-09-04-app-settings-window-plan.md`
-  （待批准实施）。
+- **设置页重构（2026-09-04 决议，取代原 popover 主面板案；计划完备，用户
+  决定暂缓执行）**：设置窗口升级为 App 级——侧边栏四分区（App：开机自启/
+  轮询间隔；外观：badge 外观；Provider：凭据配置；Hooks：agent 开关），
+  入口从 Usage 子菜单提级为菜单顶层 Settings…。计划：
+  `docs/plans/2026-09-04-app-settings-window-plan.md`，恢复执行时按其
+  "执行顺序"开工即可。
 
 ## 待定项（后续细化）
 
@@ -58,8 +60,8 @@ Glow 是 AI 编程助手的菜单栏环境状态面板，从"agent 状态灯"演
 ## M3+ 候选（2026-09-04 补充，待排期）
 
 - 可选桌面悬浮球：状态灯 + 用量信息的桌面浮动展示，菜单栏之外的可选形态。
-- 跨平台：其他操作系统与 CPU 架构支持（现为 macOS + arm64 单一目标，
-  AppKit / launchd 需抽象）。
+- 跨平台：其他操作系统支持；CPU 架构已解——v0.1.3 起正式 release 与
+  nightly 均双架构（arm64 / x86_64 安装包）。
 - agent 端 token 估算与记录：从本地会话日志估算各 agent 的 token 消耗并留存，
   承接 M2 的"本地会话日志 token 统计"批次。
 - provider 端用量记录：将 provider 轮询快照按时序留存为历史数据。
@@ -68,4 +70,5 @@ Glow 是 AI 编程助手的菜单栏环境状态面板，从"agent 状态灯"演
 ## 备注
 
 - 实现遵循现有架构约定：单一 Swift 二进制、JSON 文件契约、launchd 自启。
-- nightly 构建 hook 已就绪，代码变更 push 自动打包上传。
+- nightly 构建 hook 已就绪，代码变更 push 自动打包上传双架构
+  （`Glow-arm64.pkg` / `Glow-x86_64.pkg` + sha256）。

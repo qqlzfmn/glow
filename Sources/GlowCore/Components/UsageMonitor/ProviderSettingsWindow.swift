@@ -47,7 +47,7 @@ final class ProviderSettingsWindowController: NSWindowController {
 
     private var tableView: NSTableView?
     private var detailStack: NSStackView?
-    private var pollMinutesField: NSTextField?
+    private var pollSecondsField: NSTextField?
     /// Live handles of the form fields of the currently displayed detail.
     private var fieldViews: [(key: String, field: NSTextField)] = []
     private var baseURLField: NSTextField?
@@ -126,14 +126,14 @@ final class ProviderSettingsWindowController: NSWindowController {
         ])
         detailStack = stack
 
-        let pollLabel = makeLabel("Auto refresh (min)", color: .secondaryLabelColor)
+        let pollLabel = makeLabel("Auto refresh (sec)", color: .secondaryLabelColor)
         let pollField = NSTextField()
-        pollField.placeholderString = "5"
+        pollField.placeholderString = "300"
         pollField.widthAnchor.constraint(equalToConstant: 44).isActive = true
         pollField.heightAnchor.constraint(equalToConstant: 22).isActive = true
         pollField.target = self
-        pollField.action = #selector(pollMinutesChanged)
-        pollMinutesField = pollField
+        pollField.action = #selector(pollSecondsChanged)
+        pollSecondsField = pollField
         let refreshButton = NSButton(title: "Refresh Now", target: self, action: #selector(refreshClicked))
         refreshButton.bezelStyle = .rounded
         let closeButton = NSButton(title: "Close", target: self, action: #selector(closeClicked))
@@ -170,8 +170,8 @@ final class ProviderSettingsWindowController: NSWindowController {
             buttonRow.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -12),
         ])
 
-        pollMinutesField?.stringValue = String(
-            Int((UsageMonitor.effectivePollInterval() / 60.0).rounded())
+        pollSecondsField?.stringValue = String(
+            Int(UsageMonitor.effectivePollInterval().rounded())
         )
     }
 
@@ -381,19 +381,21 @@ final class ProviderSettingsWindowController: NSWindowController {
         reload()
     }
 
-    /// Persist the auto-refresh interval (minutes → seconds). Applied on the
-    /// next poll cycle — the loop resolves the interval fresh each round.
-    @objc private func pollMinutesChanged() {
-        guard let text = pollMinutesField?.stringValue.trimmingCharacters(in: .whitespaces),
-              let minutes = Int(text), minutes >= 1 else {
+    /// Persist the auto-refresh interval in seconds. Applied on the next
+    /// poll cycle — the loop resolves the interval fresh each round. The
+    /// 10s floor mirrors `UsageMonitor.effectivePollInterval()`, which
+    /// ignores anything smaller.
+    @objc private func pollSecondsChanged() {
+        guard let text = pollSecondsField?.stringValue.trimmingCharacters(in: .whitespaces),
+              let seconds = Int(text), seconds >= 10 else {
             // Invalid input: snap the field back to the effective value.
-            pollMinutesField?.stringValue = String(
-                Int((UsageMonitor.effectivePollInterval() / 60.0).rounded())
+            pollSecondsField?.stringValue = String(
+                Int(UsageMonitor.effectivePollInterval().rounded())
             )
             return
         }
         var file = UsageStore.readUsage()
-        file.pollSeconds = minutes * 60
+        file.pollSeconds = seconds
         do {
             try UsageStore.writeUsage(file)
         } catch {

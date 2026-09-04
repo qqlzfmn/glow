@@ -18,6 +18,8 @@ Glow 是 macOS 菜单栏的 AI 编程助手环境状态面板：Agent（Codex / 
   （pre-push hook）；本机 `/Applications/Glow.app` 运行中，launchd
   `com.qqlzfmn.glow.app` 自启
 - 设置页 App 级重构：**计划完备、暂缓执行**（`docs/plans/2026-09-04-app-settings-window-plan.md`）
+- badge 自动跟随 agent provider：调研完备（四 agent 本机实证）、计划就绪
+  待拍板 3 点（`docs/plans/2026-09-05-badge-auto-follow-agent-provider-plan.md`）
 - 本机 hooks 已切换到 Glow（`~/.codex/hooks.json` 7 事件 + `~/.claude/settings.json` 12 事件 + omp/pi 模板），**orca 第三方 hook 必须永远保留**（`~/.orca/agent-hooks/` 调用）
 - 旧仓库 qqlzfmn/vibecoding-signal-light 已 Archived，只读，勿动
 

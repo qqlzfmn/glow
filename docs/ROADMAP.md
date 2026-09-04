@@ -38,7 +38,10 @@ Glow 是 AI 编程助手的菜单栏环境状态面板，从"agent 状态灯"演
   usage.json `badge` 对象（数值/标签字号、行距、数值/标签/竖线三色 hex），
   Provider Settings 窗口 Badge 区即时生效，未触碰的颜色保持系统动态色
   （深浅色自适应），Reset 一键还原。详情面板已移除。
-- 后续批次（按优先级）：本地会话日志 token 统计（Claude JSONL / Codex
+- 后续批次（按优先级）：**badge 自动跟随 agent provider**（2026-09-05
+  调研完备 + 计划，待拍板 3 点：
+  `docs/plans/2026-09-05-badge-auto-follow-agent-provider-plan.md`）→
+  本地会话日志 token 统计（Claude JSONL / Codex
   rollout / opencode，参照 cc-switch `session_usage_*.rs` 口径）→ Session Stats 面板。
 - **设置页重构（2026-09-04 决议，取代原 popover 主面板案；计划完备，用户
   决定暂缓执行）**：设置窗口升级为 App 级——侧边栏四分区（App：开机自启/

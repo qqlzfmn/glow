@@ -123,4 +123,33 @@ final class SettingsWindowLayoutTests {
         #expect(frame.minX >= bounds.minX - 0.5, "badge controls overlap sidebar: \(frame)")
         #expect(frame.maxX <= bounds.maxX + 0.5, "badge controls pushed out: \(frame)")
     }
+
+    /// The detail action row (Save) must sit at the bottom of the detail
+    /// column — below the scrolling form, clear of it — not ride along
+    /// inside the form flow.
+    @Test @MainActor func providerSaveButtonSitsBelowScrollingForm() throws {
+        let made = try makeController()
+        let content = made.content
+
+        try sidebarButton(titled: "Providers", in: content).performClick(nil)
+        let providerPane = try #require(pane(ProviderSettingsPane.self, in: content))
+        content.layoutSubtreeIfNeeded()
+
+        let save = try #require(
+            providerPane.findAllSubviews()
+                .compactMap { $0 as? NSButton }
+                .first { $0.title == "Save" }
+        )
+        let detailScroll = try #require(
+            providerPane.findAllSubviews().compactMap { $0 as? NSScrollView }
+                .first { $0.frame.width > 200 },
+            "detail scroll view missing"
+        )
+        let saveFrame = save.convert(save.bounds, to: content)
+        let formFrame = detailScroll.convert(detailScroll.bounds, to: content)
+        // Non-flipped content coordinates: smaller y sits lower. The Save
+        // row lies entirely below the scrolling form.
+        #expect(saveFrame.maxY <= formFrame.minY + 0.5,
+                "Save row overlaps the scrolling form: save=\(saveFrame) form=\(formFrame)")
+    }
 }

@@ -16,9 +16,6 @@ extension SettingsPane {
 /// App-level settings window: a sidebar (App / Appearance / Providers /
 /// Hooks) on the left, the selected pane on the right.
 final class SettingsWindowController: NSWindowController {
-    /// Sidebar width; panes fill the rest of the 640pt window.
-    private static let sidebarWidth: CGFloat = 150
-
     private var panes: [SettingsPane] = []
     private var sidebarButtons: [NSButton] = []
 
@@ -75,7 +72,19 @@ final class SettingsWindowController: NSWindowController {
             let button = self.sidebarButton(
                 title: pane.paneTitle, tag: index
             )
+            // Attach FIRST, then pin: activating constraints between views
+            // without a common ancestor throws (same lesson as the old
+            // window's detail stack).
             sidebar.addArrangedSubview(button)
+            // Pin both edges (with a 10pt inset): every entry stretches to
+            // the widest title, so the sidebar width derives from content,
+            // not constants.
+            button.leadingAnchor.constraint(
+                equalTo: sidebar.leadingAnchor, constant: 10
+            ).isActive = true
+            button.trailingAnchor.constraint(
+                equalTo: sidebar.trailingAnchor, constant: -10
+            ).isActive = true
             sidebarButtons.append(button)
         }
 
@@ -92,7 +101,6 @@ final class SettingsWindowController: NSWindowController {
             sidebar.leadingAnchor.constraint(
                 equalTo: content.leadingAnchor, constant: 12
             ),
-            sidebar.widthAnchor.constraint(equalToConstant: Self.sidebarWidth),
         ])
 
         // All panes share the same content frame; visibility switches via
@@ -122,6 +130,8 @@ final class SettingsWindowController: NSWindowController {
     /// Borderless, layer-backed sidebar entry; the selected entry gets an
     /// accent-filled rounded background (texturedRounded's tint proved
     /// indistinguishable from unselected entries on a dark menu bar app).
+    /// Width comes from the entries' intrinsic sizes (widest title wins);
+    /// the controller pins both edges to the stack so entries stay equal.
     private func sidebarButton(title: String, tag: Int) -> NSButton {
         let button = NSButton(
             title: title,
@@ -129,11 +139,11 @@ final class SettingsWindowController: NSWindowController {
             action: #selector(sidebarClicked(_:))
         )
         button.isBordered = false
+        button.alignment = .left
         button.tag = tag
         button.wantsLayer = true
         button.layer?.cornerRadius = 6
         button.contentTintColor = .labelColor
-        button.widthAnchor.constraint(equalToConstant: Self.sidebarWidth - 16).isActive = true
         button.heightAnchor.constraint(equalToConstant: 28).isActive = true
         return button
     }

@@ -51,6 +51,9 @@ final class ProviderSettingsPane: NSView, SettingsPane {
     private var tableView: NSTableView?
     private var detailStack: NSStackView?
     private var pollSecondsField: NSTextField?
+    /// Bottom action row of the detail column; Remove only applies to
+    /// configured providers (visibility driven by rebuildDetail).
+    private var removeButton: NSButton?
     /// Live handles of the form fields of the currently displayed detail.
     private var fieldViews: [(key: String, field: NSTextField)] = []
     private var baseURLField: NSTextField?
@@ -86,7 +89,9 @@ final class ProviderSettingsPane: NSView, SettingsPane {
         table.rowHeight = 24
         table.allowsEmptySelection = false
         let column = NSTableColumn(identifier: .init("provider"))
-        column.width = 200
+        // Must match the list viewport (170); a wider column clips the
+        // trailing status marker outside the scroll view.
+        column.width = 170
         table.addTableColumn(column)
         table.delegate = self
         table.dataSource = self
@@ -135,13 +140,30 @@ final class ProviderSettingsPane: NSView, SettingsPane {
         buttonRow.orientation = .horizontal
         buttonRow.spacing = 12
 
+        // Detail action row: pinned to the bottom of the detail column so
+        // Save/Remove stay put regardless of form length.
+        let saveButton = NSButton(
+            title: "Save", target: self, action: #selector(saveClicked)
+        )
+        saveButton.bezelStyle = .rounded
+        let removeButton = NSButton(
+            title: "Remove", target: self, action: #selector(removeClicked)
+        )
+        removeButton.bezelStyle = .rounded
+        self.removeButton = removeButton
+        let saveRow = NSStackView(views: [saveButton, removeButton])
+        saveRow.orientation = .horizontal
+        saveRow.spacing = 8
+
         for view in [listScrollView, detailScroll] {
             view.translatesAutoresizingMaskIntoConstraints = false
         }
         buttonRow.translatesAutoresizingMaskIntoConstraints = false
+        saveRow.translatesAutoresizingMaskIntoConstraints = false
         addSubview(listScrollView)
         addSubview(detailScroll)
         addSubview(buttonRow)
+        addSubview(saveRow)
 
         NSLayoutConstraint.activate([
             listScrollView.topAnchor.constraint(equalTo: topAnchor),
@@ -157,6 +179,15 @@ final class ProviderSettingsPane: NSView, SettingsPane {
             ),
             detailScroll.trailingAnchor.constraint(equalTo: trailingAnchor),
             detailScroll.bottomAnchor.constraint(
+                equalTo: saveRow.topAnchor, constant: -10
+            ),
+
+            // Align the row with the detail stack's 12pt edge inset.
+            saveRow.leadingAnchor.constraint(
+                equalTo: detailScroll.leadingAnchor, constant: 12
+            ),
+            saveRow.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor),
+            saveRow.bottomAnchor.constraint(
                 equalTo: buttonRow.topAnchor, constant: -12
             ),
 
@@ -277,17 +308,9 @@ final class ProviderSettingsPane: NSView, SettingsPane {
             unitOverrideField = nil
         }
 
-        let save = NSButton(title: "Save", target: self, action: #selector(saveClicked))
-        save.bezelStyle = .rounded
-        stack.addArrangedSubview(save)
-
-        if row.state == .configured {
-            let delete = NSButton(
-                title: "Remove", target: self, action: #selector(removeClicked)
-            )
-            delete.bezelStyle = .rounded
-            stack.addArrangedSubview(delete)
-        }
+        // Save/Remove live in the fixed bottom row; Remove only applies
+        // to providers already in the explicit config.
+        removeButton?.isHidden = row.state != .configured
     }
 
     /// Vertical row: caption above, field below. The detail column is
@@ -442,7 +465,9 @@ extension ProviderSettingsPane: NSTableViewDelegate, NSTableViewDataSource {
         let stateColor: NSColor
         switch rowState.state {
         case .configured:
-            stateText = "configured"
+            // Short marker: the 170pt list cannot fit "configured" beside
+            // longer provider names without truncation.
+            stateText = "✓"
             stateColor = .systemGreen
         case .notConfigured:
             stateText = "—"
@@ -456,6 +481,8 @@ extension ProviderSettingsPane: NSTableViewDelegate, NSTableViewDataSource {
         container.orientation = .horizontal
         container.distribution = .fill
         container.spacing = 6
+        // Keep the trailing marker clear of the bezel border.
+        container.edgeInsets = NSEdgeInsets(top: 0, left: 0, bottom: 0, right: 8)
         return container
     }
 

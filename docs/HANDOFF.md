@@ -60,6 +60,14 @@ Producer（AgentMonitor 等，产生事件，禁碰 UI）
 `StateDirEnvLock`（`Tests/GlowTests/TestSupport.swift`，init 加锁 deinit 释放）。
 新套件再碰该 env 时照抄此模式。
 
+**AppKit 布局陷阱（设置窗踩过）**：① pane 内容约束会把窗口撑到 fitting
+尺寸——设置窗 content 钉死 640×480（`SettingsWindowController`），窗内求解；
+② 直接 addSubview 的视图默认 `translatesAutoresizingMaskIntoConstraints =
+true`，自动生成的钉扎约束会静默压过 top/leading anchor——手动约束前必须
+清标志；③ hidden 子树被布局引擎跳过，首次切出的 pane 需 `needsLayout +
+layoutSubtreeIfNeeded`；④ 测试里持有 controller 必须用实名绑定，`_` 匿名
+绑定会提前释放 NSWindowController 导致 target-action 全失效。
+
 - **AgentMonitor**：4 个 agent 子适配器、事件→信号映射、深度失败探测、sessions.json 契约（flock + TTL）、多会话聚合（blocked > permission > attention/done > working > idle）、install-hooks/uninstall-hooks 双向幂等
 - **BuiltInRenderer**：菜单栏灯色（闪烁语义）+ usage badge + 菜单（详情面板已按用户要求移除）
 - **UsageMonitor**：14 个 provider Producer（配额/余额/官方 usage，仅显式配置）、usage.json 契约（badge_provider/poll_seconds）、自绘状态栏徽章（badge 钉选 + 多窗口竖线）、Usage 菜单、`usage`/`usage-config` CLI（详见 PLUGINS.md 第 4 节与 HANDOFF M2 节）
@@ -85,6 +93,12 @@ Producer（AgentMonitor 等，产生事件，禁碰 UI）
   生命周期陷阱：测试里必须持有 controller，`_` 匿名绑定会让
   NSWindowController 提前释放、target-action 全部失效）与
   HookSettingsPaneTests（GLOW_HOME 隔离契约），181 测试 |
+| 2fc2d16 | **设置窗视觉迭代（截图驱动自审）**——content 钉死 640×480
+  + window.center()（pane fitting 约束曾把窗口撑到 826×44）；侧边栏改
+  borderless + layer 背景，选中态 accent 圆角高亮 + 白字；
+  BadgeAppearanceControls 补 44pt 高度钉扎 + row 横向压缩降级；
+  Provider 表单行垂直化（caption 上/240pt field 下，list 210→170）。
+  新增 AppKit 陷阱（详见下方测试/布局陷阱） |
 
 重构方法论（沿用即可）：每阶段 subagent 实现 → 主会话独立验收（swift test + smoke + grep 残留）→ 原子 commit → push。
 

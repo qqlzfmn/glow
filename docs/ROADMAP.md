@@ -15,12 +15,8 @@ Glow 是 AI 编程助手的菜单栏环境状态面板，从"agent 状态灯"演
 
 - 灯语体系与多会话聚合（`sessions.json` 契约、优先级聚合、flock 并发）。
 - Codex / Claude Code JSON hook 集成，omp / pi TS 扩展模板集成。
-- launchd 开机自启、`install-hooks` CLI 与 GUI 安装向导、nightly pre-push 打包。
-
-计划占位（待排期）：
-
-- CI：push 时跑 `swift test`，保证主干可构建可测试。
-- `uninstall-hooks` 子命令：对称地移除/回滚已安装的 hook 与扩展模板。
+- launchd 开机自启、`install-hooks` / `uninstall-hooks` CLI 与 GUI 安装向导、
+  nightly pre-push 打包；GitHub Actions CI（push 跑 `swift test`）。
 
 ### M2 — provider-usage（实施中）
 
@@ -37,9 +33,11 @@ Glow 是 AI 编程助手的菜单栏环境状态面板，从"agent 状态灯"演
 - **契约**（已落地）：`usage.json`（`StatePaths.usageFile`，flock 互斥，
   `order` 定优先级），CLI `usage` 子命令打印快照。
 - **Renderer**（已落地）：菜单栏 badge 文本（首个可用 provider 首条 item）、
-  Usage 子菜单（逐条目渲染 5h/1w/1m/余额）。详情面板已移除。
-- 后续批次（按优先级）：new-api / one-api 网关统计 → 火山方舟（AK/SK 签名）→
-  智谱团队版（`?type=2`）→ 本地会话日志 token 统计（Claude JSONL / Codex
+  Usage 子菜单（逐条目渲染 5h/1w/1m/余额）；badge 外观可自定义——
+  usage.json `badge` 对象（数值/标签字号、行距、数值/标签/竖线三色 hex），
+  Provider Settings 窗口 Badge 区即时生效，未触碰的颜色保持系统动态色
+  （深浅色自适应），Reset 一键还原。详情面板已移除。
+- 后续批次（按优先级）：本地会话日志 token 统计（Claude JSONL / Codex
   rollout / opencode，参照 cc-switch `session_usage_*.rs` 口径）→ Session Stats 面板。
 
 ## 待定项（后续细化）
@@ -47,12 +45,10 @@ Glow 是 AI 编程助手的菜单栏环境状态面板，从"agent 状态灯"演
 - 用量数据与灯语体系的关系：当前独立（usage.json 与 sessions.json 分离，
   badge 只加文本不换灯色）；是否引入"配额耗尽 → 黄灯"类联动待定。
 - 官方 API 的金额/成本口径（Anthropic cost report 端点是否纳入）。
-- 菜单栏 badge 外观自定义：设置页（Usage Providers 窗口）支持调整字体大小、
-  行间距、颜色（数值/小标签/竖线）等渲染参数，替代硬编码。
 - 插件化拆分：组件协议转 public、拆独立 target 的时机。
 - 功能可配置化（总原则）：已有与后续功能均需在设置页提供开关与参数调整
-  （badge 外观、悬浮球、token 记录等），不引入硬编码-only 行为；
-  badge 外观自定义条目即首个落地案例。
+  （悬浮球、token 记录等），不引入硬编码-only 行为；badge 外观自定义
+  已于 2026-09-04 落地（首个案例）。
 
 ## M3+ 候选（2026-09-04 补充，待排期）
 

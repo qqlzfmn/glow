@@ -121,6 +121,12 @@ M2a 交付（数据源：用户选定 API usage 端点路线；展示：灯图�
    行可点击钉选徽章（`badge_provider` 持久化）；自动刷新间隔在窗口底部
    输入（`poll_seconds`，循环每轮动态读取）；LSUIElement 隐藏 Edit 菜单
    修复 Cmd+C/V/X/A；`GLOW_HOME` 隔离配置根目录（smoke 不碰真实配置）。
+8. **Badge 外观自定义（2026-09-04）**：usage.json 顶层 `badge` 对象
+   （`BadgeAppearance`：数值/标签字号、行距、三色 hex，nil=默认，写入即
+   钳制）；Provider Settings 窗口底部 Badge 区（`BadgeAppearanceControls`，
+   只写用户触碰过的字段——未触碰的颜色井保持系统动态色以自适应深浅
+   菜单栏，Reset 清空为 nil）；`StatusBarController.updateUsageBadge()` 每
+   次更新动态读取，设置改动经 `onBadgeChange` 回调立即重绘、无需等轮询。
 
 ### 发版流程（v0.1.0 首发）
 

@@ -1,13 +1,15 @@
 #!/bin/bash
 set -euo pipefail
 
-# Pre-push hook: rebuild the .pkg and publish to the fixed `nightly` GitHub
-# release when code under the repo root changes. Skipped silently for
-# docs-only pushes. Uploads Glow.pkg + sha256 checksum.
+# Pre-push hook: rebuild the .pkg pair and publish to the fixed `nightly`
+# GitHub release when code under the repo root changes. Skipped silently
+# for docs-only pushes. Uploads Glow-arm64.pkg + Glow-x86_64.pkg + sha256
+# checksums.
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 BUILD_DIR="$REPO_ROOT/.build"
-PKG="$BUILD_DIR/Glow.pkg"
+PKG_ARM="$BUILD_DIR/Glow-arm64.pkg"
+PKG_X86="$BUILD_DIR/Glow-x86_64.pkg"
 
 # stdin: <local ref> <local sha> <remote ref> <remote sha> per pushed ref
 refs=()
@@ -28,7 +30,7 @@ for ((i = 0; i < ${#refs[@]}; i += 4)); do
     else
         files="$(git diff --name-only "$remote_sha" "$local_sha")"
     fi
-    if echo "$files" | grep -qE '^(Sources/|Tests/|Resources/|Package\.swift|build\.sh|package\.sh)'; then
+    if echo "$files" | grep -qE '^(Sources/|Tests/|Resources/|scripts/|\.githooks/|Package\.swift)'; then
         changed=1
         last_local_sha="$local_sha"
     fi
@@ -39,11 +41,16 @@ if [ "$changed" -eq 0 ]; then
     exit 0
 fi
 
-echo "==> pre-push: rebuilding package..."
+echo "==> pre-push: rebuilding packages (x86_64, then arm64)..."
+# Cross-compile first so the .build/Glow.app left on disk afterwards is
+# the native arm64 bundle.
+bash "$REPO_ROOT/scripts/package.sh" x86_64
 bash "$REPO_ROOT/scripts/package.sh"
+mv "$BUILD_DIR/Glow.pkg" "$PKG_ARM"
 
-# Checksum
-shasum -a 256 "$PKG" | awk '{print $1}' > "$PKG.sha256"
+# Checksums (hash-only files, same style as before)
+shasum -a 256 "$PKG_ARM" | awk '{print $1}' > "$PKG_ARM.sha256"
+shasum -a 256 "$PKG_X86" | awk '{print $1}' > "$PKG_X86.sha256"
 
 # Version from Info.plist
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$REPO_ROOT/Resources/Info.plist" 2>/dev/null || echo '0.1.0')"
@@ -63,12 +70,12 @@ cat > "$NOTES_FILE" <<EOF
 $CHANGES
 
 ### Install
-1. 下载 \`Glow.pkg\`
-2. 双击安装；若被 Gatekeeper 拦截：右键 → 打开（或 \`sudo installer -pkg Glow.pkg -target /\`）
+1. 按架构下载：\`Glow-arm64.pkg\`（Apple Silicon）/ \`Glow-x86_64.pkg\`（Intel）
+2. 双击安装；若被 Gatekeeper 拦截：右键 → 打开（或 \`sudo installer -pkg Glow-<arch>.pkg -target /\`）
 3. 首次启动自动配置 launchd 开机自启
 
 ### Requirements
-- macOS 13.0+，Apple Silicon (arm64)
+- macOS 13.0+，Apple Silicon (arm64) 或 Intel (x86_64)
 
 ### Usage
 菜单栏右键 → Install Hooks 子菜单，按 agent 安装（Codex / Claude Code / omp / pi）
@@ -81,10 +88,10 @@ EOF
 
 echo "==> pre-push: publishing to nightly release..."
 if gh release view nightly >/dev/null 2>&1; then
-    gh release upload nightly "$PKG" "$PKG.sha256" --clobber
+    gh release upload nightly "$PKG_ARM" "$PKG_ARM.sha256" "$PKG_X86" "$PKG_X86.sha256" --clobber
     gh release edit nightly --notes-file "$NOTES_FILE"
 else
-    gh release create nightly "$PKG" "$PKG.sha256" \
+    gh release create nightly "$PKG_ARM" "$PKG_ARM.sha256" "$PKG_X86" "$PKG_X86.sha256" \
         --title "Nightly" --notes-file "$NOTES_FILE" --target "$last_local_sha"
 fi
 rm -f "$NOTES_FILE"

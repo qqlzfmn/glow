@@ -173,7 +173,7 @@ echo '{"event":"Notification","session_id":"demo"}' | $APP claude-code-hook
 
 ## Nightly 构建
 
-推送代码变更（`Sources/`、`Tests/`、`Resources/`、`Package.swift`、构建脚本）时，`.githooks/pre-push` 会自动重新打包并上传到 GitHub 的 `nightly` release（固定名称，资产 `Glow.pkg` + `sha256` 覆盖更新；仅文档变更的推送会跳过）。
+推送代码变更（`Sources/`、`Tests/`、`Resources/`、`scripts/`、`.githooks/`、`Package.swift`）时，`.githooks/pre-push` 会自动重新打包并上传到 GitHub 的 `nightly` release（固定名称，资产 `Glow-arm64.pkg` / `Glow-x86_64.pkg` + `sha256` 覆盖更新；仅文档变更的推送会跳过）。
 
 启用（一次性）：
 

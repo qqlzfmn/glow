@@ -43,12 +43,13 @@ Glow 是 AI 编程助手的菜单栏环境状态面板，从"agent 状态灯"演
   `docs/plans/2026-09-05-badge-auto-follow-agent-provider-plan.md`）→
   本地会话日志 token 统计（Claude JSONL / Codex
   rollout / opencode，参照 cc-switch `session_usage_*.rs` 口径）→ Session Stats 面板。
-- **设置页重构（2026-09-04 决议，取代原 popover 主面板案；计划完备，用户
-  决定暂缓执行）**：设置窗口升级为 App 级——侧边栏四分区（App：开机自启/
-  轮询间隔；外观：badge 外观；Provider：凭据配置；Hooks：agent 开关），
-  入口从 Usage 子菜单提级为菜单顶层 Settings…。计划：
-  `docs/plans/2026-09-04-app-settings-window-plan.md`，恢复执行时按其
-  "执行顺序"开工即可。
+- **设置页 App 级重构（2026-09-05 已落地）**：设置窗口升级为 App
+  级——侧边栏四分区（App：开机自启；外观：badge 外观；Provider：
+  凭据配置 + 轮询间隔；Hooks：agent 开关），入口为菜单顶层
+  Settings…（位于 Install Hooks 下）。实现：`Components/Settings/`，
+  计划：`docs/plans/2026-09-04-app-settings-window-plan.md`（执行时
+  两点拍板调整：Settings… 移至 Install Hooks 下；poll_seconds 归
+  Providers 分区）。
 
 ## 待定项（后续细化）
 

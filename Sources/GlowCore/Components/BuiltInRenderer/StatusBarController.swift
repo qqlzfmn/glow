@@ -9,8 +9,8 @@ final class StatusBarController: NSObject {
     private var flashTimer: Timer?
 
     private weak var usageMonitor: UsageMonitor?
-    /// Host-injected: opens the Provider Settings window.
-    var openProviderSettings: (() -> Void)?
+    /// Host-injected: opens the Settings window.
+    var openSettings: (() -> Void)?
     private var usageBadgeText: String = ""
     private var badgeView: StatusItemBadgeView?
     private var signalStartedAt: TimeInterval = 0
@@ -81,6 +81,14 @@ final class StatusBarController: NSObject {
         let installItem = NSMenuItem(title: "Install Hooks", action: nil, keyEquivalent: "")
         installItem.submenu = installMenu
         menu.addItem(installItem)
+
+        menu.addItem(NSMenuItem.separator())
+
+        let settingsItem = NSMenuItem(
+            title: "Settings…", action: #selector(openSettingsClicked), keyEquivalent: ""
+        )
+        settingsItem.target = self
+        menu.addItem(settingsItem)
 
         menu.addItem(NSMenuItem.separator())
 
@@ -286,13 +294,6 @@ extension StatusBarController: NSMenuDelegate {
             for item in usageMonitor.menuItems() {
                 menu.addItem(item)
             }
-            let configure = NSMenuItem(
-                title: "Configure Providers…",
-                action: #selector(openProviderSettingsClicked),
-                keyEquivalent: ""
-            )
-            configure.target = self
-            menu.addItem(configure)
         } else if menu.title == "Install Hooks" {
             // Re-inspect on every open so checkmarks mirror on-disk state
             // even when hooks were changed via CLI or by another process.
@@ -304,8 +305,8 @@ extension StatusBarController: NSMenuDelegate {
         }
     }
 
-    @objc private func openProviderSettingsClicked() {
-        openProviderSettings?()
+    @objc private func openSettingsClicked() {
+        openSettings?()
     }
 }
 

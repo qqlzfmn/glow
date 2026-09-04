@@ -4,7 +4,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     private var poller: SessionPoller?
     private var usageMonitor: UsageMonitor?
     private var statusBarController: StatusBarController?
-    private var providerSettings: ProviderSettingsWindowController?
+    private var settingsWindow: SettingsWindowController?
 
     public override init() {}
 
@@ -31,8 +31,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         self.usageMonitor = usageMonitor
 
         statusBarController = StatusBarController(poller: poller, usageMonitor: usageMonitor)
-        statusBarController?.openProviderSettings = { [weak self] in
-            self?.showProviderSettings()
+        statusBarController?.openSettings = { [weak self] in
+            self?.showSettings()
         }
         usageMonitor.onUsageUpdated = { [weak statusBarController] in
             statusBarController?.updateUsageBadge()
@@ -41,11 +41,12 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         poller.start()
     }
 
-    /// Lazily create and present the Provider Settings window. Saving in the
-    /// window triggers an immediate UsageMonitor re-discovery + poll.
-    private func showProviderSettings() {
-        if providerSettings == nil {
-            providerSettings = ProviderSettingsWindowController(
+    /// Lazily create and present the Settings window. Saving a provider
+    /// triggers an immediate UsageMonitor re-discovery + poll; appearance
+    /// changes redraw the menu bar badge without waiting for a poll.
+    private func showSettings() {
+        if settingsWindow == nil {
+            settingsWindow = SettingsWindowController(
                 onRefresh: { [weak self] in
                     self?.usageMonitor?.refreshNow()
                 },
@@ -54,8 +55,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             )
         }
-        providerSettings?.showWindow(nil)
-        providerSettings?.window?.makeKeyAndOrderFront(nil)
+        settingsWindow?.showWindow(nil)
+        settingsWindow?.window?.makeKeyAndOrderFront(nil)
     }
 
     /// LSUIElement apps have no menu bar, so the standard Edit shortcuts

@@ -83,10 +83,10 @@ $APP usage-config add deepseek     # 交互式添加（提示输入 key）
 $APP usage-config remove deepseek  # 移除
 ```
 
-或菜单栏图标 → Usage → **Configure Providers…** 打开设置窗口，选中类型填写凭据保存。保存后立即刷新，无需重启。
+或菜单栏图标 → **Settings…** → Providers 分区打开设置窗口，选中类型填写凭据保存。保存后立即刷新，无需重启。
 
 - 徽章钉选：Usage 菜单里点击 provider 名称（打 ✓）即把徽章钉到该 provider；再点取消，回到默认顺序。
-- 自动刷新间隔：设置窗口底部的 "Auto refresh (min)"。
+- 自动刷新间隔：Settings → Providers 分区底部的 "Auto refresh (sec)"。
 - 所有 provider 都来自显式配置（`~/.config/glow/usage.json`，0600），不会被 agent 配置隐式启用。
 
 <p align="center">

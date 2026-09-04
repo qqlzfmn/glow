@@ -11,13 +11,16 @@ Glow 是 macOS 菜单栏的 AI 编程助手环境状态面板：Agent（Codex / 
 
 ## 当前状态快照
 
-- 测试：177 个 Swift Testing 测试 / 23 套件，全绿（`StateDirEnvLock` 见下方陷阱）
+- 测试：181 个 Swift Testing 测试 / 24 套件，全绿（`StateDirEnvLock` 见下方陷阱）
 - 结构：仓库根 SPM 包（`Sources/GlowCore/{Kernel,Components}` + `Sources/Glow` 薄入口 + `Tests/GlowTests`）
 - M2a/M2b 已完成：provider-usage + badge 外观自定义（详见下方 M2 节与 docs/PLUGINS.md）
 - 已发布：v0.1.3（arm64 + x86_64 双架构）；nightly release 双架构自动构建上传
   （pre-push hook）；本机 `/Applications/Glow.app` 运行中，launchd
   `com.qqlzfmn.glow.app` 自启
-- 设置页 App 级重构：**计划完备、暂缓执行**（`docs/plans/2026-09-04-app-settings-window-plan.md`）
+- 设置页 App 级重构：**已于 2026-09-05 落地**（`Components/Settings/`，
+  SettingsWindowController + 四 pane；菜单顶层 Settings… 入口位于 Install
+  Hooks 下；旧 ProviderSettingsWindow 已删除；执行时拍板两点：Settings…
+  在 Install Hooks 下、poll_seconds 归 Providers 分区）
 - badge 自动跟随 agent provider：调研完备（四 agent 本机实证）、计划就绪
   待拍板 3 点（`docs/plans/2026-09-05-badge-auto-follow-agent-provider-plan.md`）
 - 本机 hooks 已切换到 Glow（`~/.codex/hooks.json` 7 事件 + `~/.claude/settings.json` 12 事件 + omp/pi 模板），**orca 第三方 hook 必须永远保留**（`~/.orca/agent-hooks/` 调用）
@@ -75,7 +78,13 @@ Producer（AgentMonitor 等，产生事件，禁碰 UI）
 | f1035cb | M2a：**Usage Monitor**——组件协议落地（GlowComponent/UsageProducer/MenuContributor）+ usage.json 契约（flock 共享 StateFileLock）+ 11 个 provider Producer（GLM/Kimi/MiniMax/ZenMux/OpenCodeGo 配额，DeepSeek/OpenRouter/SiliconFlow/StepFun 余额，Anthropic/OpenAI 官方 usage）+ 凭据三路自动发现 + 菜单栏 badge + Usage 菜单/详情面板区块 + `usage` CLI，134 测试。端点口径源自 cc-switch `coding_plan.rs`/`balance.rs`（用户指定参考）与官方文档实证 |
 | 507437f | **Badge 外观自定义**——usage.json `badge` 对象（BadgeAppearance：字号/行距/三色 hex，写入即钳制）+ 设置窗口 Badge 区（BadgeAppearanceControls，未触碰颜色保持系统动态色）+ `onBadgeChange` 即时重绘，169 测试；2363f5e 修复其 TAMIC 约束冲突挤掉 poll 行（新增 ProviderSettingsWindowLayoutTests），177 测试 |
 | 27cd5e6 | **双架构发布**——build/package.sh 支持 arch 参数；nightly pre-push 双架构上传（Glow-arm64/Glow-x86_64）+ 触发正则补 scripts/、.githooks/（旧正则自脚本搬家后失配）；正式版 v0.1.3 首发 x86_64 包 |
-| — | 设置页 App 级重构：决议 + 完整计划后**用户暂缓**（docs/plans/2026-09-04-app-settings-window-plan.md），恢复按计划执行顺序开工 |
+| — | 设置页 App 级重构：**已完成（2026-09-05）**——`Components/Settings/`
+  （SettingsWindowController + App/Appearance/Provider/Hook 四 pane，
+  isHidden 切换保留 pane 状态），菜单顶层 Settings…；旧
+  ProviderSettingsWindow 删除；新增 SettingsWindowLayoutTests（含 controller
+  生命周期陷阱：测试里必须持有 controller，`_` 匿名绑定会让
+  NSWindowController 提前释放、target-action 全部失效）与
+  HookSettingsPaneTests（GLOW_HOME 隔离契约），181 测试 |
 
 重构方法论（沿用即可）：每阶段 subagent 实现 → 主会话独立验收（swift test + smoke + grep 残留）→ 原子 commit → push。
 
@@ -115,8 +124,11 @@ M2a 交付（数据源：用户选定 API usage 端点路线；展示：灯图�
 5. **配置可用性**：`usage-config` CLI（list/add/remove 交互向导，0600 配置
    文件）+ 菜单 "Configure Providers…" 入口 + 每轮轮询动态重新发现（配置
    改动免重启生效）。
-6. **Provider Settings 窗口（GUI，Phase 1）**：菜单 "Configure Providers…"
-   打开双栏配置窗口（`ProviderSettingsWindow.swift`）——左列 14 个类型带
+6. **Provider Settings 窗口（GUI，Phase 1，2026-09-05 起为 Settings 窗口
+   Providers 分区）**：原双栏配置窗口已整体迁移为
+   `Components/Settings/ProviderSettingsPane.swift`（RowState 同迁）；
+   打开方式为菜单栏图标 → 顶层 Settings… → Providers（自动刷新间隔
+   与 Refresh Now 也在该分区）。分区内容：左列 14 个类型带
    configured/— 状态徽章，右侧按 `UsageKinds` 动态生成凭据表单
    （secret 字段 NSSecureTextField、Display name 覆盖、Unit 仅余额类、
    Base URL 仅 usesBaseURL 类且 placeholder 显示默认完整端点），保存/删除

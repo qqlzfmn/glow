@@ -52,7 +52,7 @@ final class ProviderRowStateTests {
     }
 
     @Test func resolveProducesTwoStates() {
-        let rows = ProviderSettingsWindowController.RowState.resolve(
+        let rows = ProviderSettingsPane.RowState.resolve(
             kinds: kinds,
             explicit: [config("deepseek")],
             snapshots: ["glm": snapshot("glm", percent: 5)]
@@ -65,7 +65,7 @@ final class ProviderRowStateTests {
     }
 
     @Test func configuredRowPrefillsExplicitValues() {
-        let rows = ProviderSettingsWindowController.RowState.resolve(
+        let rows = ProviderSettingsPane.RowState.resolve(
             kinds: kinds,
             explicit: [config("glm", token: "explicit-tok")],
             snapshots: [:]
@@ -76,7 +76,7 @@ final class ProviderRowStateTests {
     }
 
     @Test func snapshotAttachesToMatchingKind() {
-        let rows = ProviderSettingsWindowController.RowState.resolve(
+        let rows = ProviderSettingsPane.RowState.resolve(
             kinds: kinds,
             explicit: [],
             snapshots: ["glm": snapshot("glm", percent: 7)]

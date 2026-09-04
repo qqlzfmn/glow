@@ -1,13 +1,16 @@
 import AppKit
 
-/// Settings window for usage providers: the left table lists every supported
-/// provider type with its configuration state (configured / auto-discovered /
-/// not configured); the right pane renders a dynamic credential form per
-/// provider kind. Saving writes the 0600 explicit config and fires
-/// `onRefresh`, so new providers appear in the menu within seconds.
-final class ProviderSettingsWindowController: NSWindowController {
-    /// Left-table row: one per supported kind, resolved against the explicit
-    /// config, auto-discovery, and the latest usage snapshot.
+/// Providers section: the left table lists every supported provider type
+/// with its configuration state (configured / not configured); the right
+/// pane renders a dynamic credential form per provider kind. Saving writes
+/// the 0600 explicit config and fires `onRefresh`, so new providers appear
+/// in the menu within seconds. The auto-refresh interval (poll_seconds)
+/// and Refresh Now also live here — they are provider-polling concerns.
+final class ProviderSettingsPane: NSView, SettingsPane {
+    let paneTitle = "Providers"
+
+    /// Left-table row: one per supported kind, resolved against the
+    /// explicit config and the latest usage snapshot.
     struct RowState {
         let kind: UsageProviderKind
         let explicit: UsageProviderConfig?
@@ -44,14 +47,10 @@ final class ProviderSettingsWindowController: NSWindowController {
     /// Called after a save/delete; the host triggers UsageMonitor to
     /// re-discover and poll immediately.
     private let onRefresh: () -> Void
-    /// Called after badge appearance changes; the host redraws the menu
-    /// bar badge without waiting for the next poll.
-    private let onBadgeChange: () -> Void
 
     private var tableView: NSTableView?
     private var detailStack: NSStackView?
     private var pollSecondsField: NSTextField?
-    private var badgeControls: BadgeAppearanceControls?
     /// Live handles of the form fields of the currently displayed detail.
     private var fieldViews: [(key: String, field: NSTextField)] = []
     private var baseURLField: NSTextField?
@@ -59,19 +58,9 @@ final class ProviderSettingsWindowController: NSWindowController {
     /// Optional display-name override field of the current detail form.
     private var displayNameField: NSTextField?
 
-    init(onRefresh: @escaping () -> Void, onBadgeChange: @escaping () -> Void = {}) {
+    init(onRefresh: @escaping () -> Void) {
         self.onRefresh = onRefresh
-        self.onBadgeChange = onBadgeChange
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 560, height: 470),
-            styleMask: [.titled, .closable],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = "Usage Providers"
-        window.isReleasedWhenClosed = false
-        super.init(window: window)
-        window.delegate = self
+        super.init(frame: .zero)
         setupContent()
         reload()
     }
@@ -81,17 +70,13 @@ final class ProviderSettingsWindowController: NSWindowController {
         fatalError("init(coder:) has not been implemented")
     }
 
-    override func showWindow(_ sender: Any?) {
+    func paneWillAppear() {
         reload()
-        super.showWindow(sender)
-        NSApp.activate(ignoringOtherApps: true)
     }
 
     // MARK: - Layout
 
     private func setupContent() {
-        guard let content = window?.contentView else { return }
-
         let listScrollView = NSScrollView()
         listScrollView.hasVerticalScroller = true
         listScrollView.borderType = .bezelBorder
@@ -131,7 +116,7 @@ final class ProviderSettingsWindowController: NSWindowController {
         ])
         detailStack = stack
 
-        let pollLabel = makeLabel("Auto refresh (sec)", color: .secondaryLabelColor)
+        let pollLabel = makeSettingsLabel("Auto refresh (sec)", color: .secondaryLabelColor)
         let pollField = NSTextField()
         pollField.placeholderString = "300"
         pollField.widthAnchor.constraint(equalToConstant: 44).isActive = true
@@ -139,53 +124,45 @@ final class ProviderSettingsWindowController: NSWindowController {
         pollField.target = self
         pollField.action = #selector(pollSecondsChanged)
         pollSecondsField = pollField
-        let refreshButton = NSButton(title: "Refresh Now", target: self, action: #selector(refreshClicked))
+        let refreshButton = NSButton(
+            title: "Refresh Now", target: self, action: #selector(refreshClicked)
+        )
         refreshButton.bezelStyle = .rounded
-        let closeButton = NSButton(title: "Close", target: self, action: #selector(closeClicked))
-        closeButton.bezelStyle = .rounded
         let pollGroup = NSStackView(views: [pollLabel, pollField])
         pollGroup.orientation = .horizontal
         pollGroup.spacing = 6
-        let buttonRow = NSStackView(views: [pollGroup, refreshButton, closeButton])
+        let buttonRow = NSStackView(views: [pollGroup, refreshButton])
         buttonRow.orientation = .horizontal
         buttonRow.spacing = 12
-
-        let badgeControls = BadgeAppearanceControls(frame: .zero)
-        // Autoresizing-mask constraints from the initial frame fight the
-        // explicit constraints below and crowd the bottom row off-window.
-        badgeControls.translatesAutoresizingMaskIntoConstraints = false
-        badgeControls.onApply = { [weak self] in self?.onBadgeChange() }
-        self.badgeControls = badgeControls
 
         for view in [listScrollView, detailScroll] {
             view.translatesAutoresizingMaskIntoConstraints = false
         }
         buttonRow.translatesAutoresizingMaskIntoConstraints = false
-
-        content.addSubview(listScrollView)
-        content.addSubview(detailScroll)
-        content.addSubview(badgeControls)
-        content.addSubview(buttonRow)
+        addSubview(listScrollView)
+        addSubview(detailScroll)
+        addSubview(buttonRow)
 
         NSLayoutConstraint.activate([
-            listScrollView.topAnchor.constraint(equalTo: content.topAnchor, constant: 12),
-            listScrollView.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 12),
-            listScrollView.bottomAnchor.constraint(equalTo: badgeControls.topAnchor, constant: -12),
+            listScrollView.topAnchor.constraint(equalTo: topAnchor),
+            listScrollView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            listScrollView.bottomAnchor.constraint(
+                equalTo: buttonRow.topAnchor, constant: -12
+            ),
             listScrollView.widthAnchor.constraint(equalToConstant: 210),
 
-            detailScroll.topAnchor.constraint(equalTo: content.topAnchor, constant: 12),
-            detailScroll.leadingAnchor.constraint(equalTo: listScrollView.trailingAnchor, constant: 12),
-            detailScroll.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -12),
-            detailScroll.bottomAnchor.constraint(equalTo: badgeControls.topAnchor, constant: -12),
+            detailScroll.topAnchor.constraint(equalTo: topAnchor),
+            detailScroll.leadingAnchor.constraint(
+                equalTo: listScrollView.trailingAnchor, constant: 12
+            ),
+            detailScroll.trailingAnchor.constraint(equalTo: trailingAnchor),
+            detailScroll.bottomAnchor.constraint(
+                equalTo: buttonRow.topAnchor, constant: -12
+            ),
 
-            badgeControls.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 12),
-            badgeControls.trailingAnchor.constraint(lessThanOrEqualTo: content.trailingAnchor, constant: -12),
-            badgeControls.bottomAnchor.constraint(equalTo: buttonRow.topAnchor, constant: -12),
-            badgeControls.heightAnchor.constraint(equalToConstant: 44),
-
-            buttonRow.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 12),
-            buttonRow.trailingAnchor.constraint(lessThanOrEqualTo: content.trailingAnchor, constant: -12),
-            buttonRow.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -12),
+            buttonRow.leadingAnchor.constraint(equalTo: leadingAnchor),
+            buttonRow.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor),
+            buttonRow.bottomAnchor.constraint(equalTo: bottomAnchor),
         ])
 
         pollSecondsField?.stringValue = String(
@@ -202,9 +179,10 @@ final class ProviderSettingsWindowController: NSWindowController {
             snapshots: UsageStore.readUsage().providers
         )
         tableView?.reloadData()
-        tableView?.selectRowIndexes(IndexSet(integer: selectedIndex), byExtendingSelection: false)
+        tableView?.selectRowIndexes(
+            IndexSet(integer: selectedIndex), byExtendingSelection: false
+        )
         rebuildDetail()
-        badgeControls?.reloadFromStore()
     }
 
     private func selectedRow() -> RowState? {
@@ -223,22 +201,32 @@ final class ProviderSettingsWindowController: NSWindowController {
         guard let row = selectedRow() else { return }
         let kind = row.kind
 
-        stack.addArrangedSubview(makeLabel(kind.displayName, size: 14, bold: true))
+        stack.addArrangedSubview(makeSettingsLabel(kind.displayName, size: 14, bold: true))
 
         switch row.state {
         case .configured:
             stack.addArrangedSubview(
-                makeLabel("Configured in \(UsageConfigStore.configFile())", color: .secondaryLabelColor)
+                makeSettingsLabel(
+                    "Configured in \(UsageConfigStore.configFile())",
+                    color: .secondaryLabelColor
+                )
             )
         case .notConfigured:
-            stack.addArrangedSubview(makeLabel("Not configured yet.", color: .secondaryLabelColor))
+            stack.addArrangedSubview(
+                makeSettingsLabel("Not configured yet.", color: .secondaryLabelColor)
+            )
         }
 
         if let snapshot = row.snapshot, !snapshot.items.isEmpty {
-            let usage = snapshot.items.map { UsageBadge.itemText($0) }.joined(separator: " · ")
-            stack.addArrangedSubview(makeLabel("Current: \(usage)", color: .secondaryLabelColor))
+            let usage = snapshot.items.map { UsageBadge.itemText($0) }
+                .joined(separator: " · ")
+            stack.addArrangedSubview(
+                makeSettingsLabel("Current: \(usage)", color: .secondaryLabelColor)
+            )
         } else {
-            stack.addArrangedSubview(makeLabel("Current: no data yet", color: .tertiaryLabelColor))
+            stack.addArrangedSubview(
+                makeSettingsLabel("Current: no data yet", color: .tertiaryLabelColor)
+            )
         }
 
         stack.addArrangedSubview(makeSeparator())
@@ -294,14 +282,16 @@ final class ProviderSettingsWindowController: NSWindowController {
         stack.addArrangedSubview(save)
 
         if row.state == .configured {
-            let delete = NSButton(title: "Remove", target: self, action: #selector(removeClicked))
+            let delete = NSButton(
+                title: "Remove", target: self, action: #selector(removeClicked)
+            )
             delete.bezelStyle = .rounded
             stack.addArrangedSubview(delete)
         }
     }
 
     private func makeFieldRow(label: String, field: NSTextField) -> NSView {
-        let text = makeLabel(label, color: .secondaryLabelColor)
+        let text = makeSettingsLabel(label, color: .secondaryLabelColor)
         text.widthAnchor.constraint(equalToConstant: 170).isActive = true
         text.alignment = .right
         field.widthAnchor.constraint(equalToConstant: 240).isActive = true
@@ -309,14 +299,6 @@ final class ProviderSettingsWindowController: NSWindowController {
         row.orientation = .horizontal
         row.spacing = 8
         return row
-    }
-
-    private func makeLabel(_ text: String, size: CGFloat = 11, bold: Bool = false, color: NSColor = .labelColor) -> NSTextField {
-        let label = NSTextField(labelWithString: text)
-        label.font = bold ? NSFont.systemFont(ofSize: size, weight: .semibold) : NSFont.systemFont(ofSize: size)
-        label.textColor = color
-        label.lineBreakMode = .byTruncatingTail
-        return label
     }
 
     private func makeSeparator() -> NSView {
@@ -333,7 +315,9 @@ final class ProviderSettingsWindowController: NSWindowController {
         guard let first = fieldViews.first else { return }
         let token = first.field.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !token.isEmpty else {
-            presentError(message: "\(row.kind.displayName) needs a non-empty \(first.key).")
+            presentSettingsError(
+                "\(row.kind.displayName) needs a non-empty \(first.key)."
+            )
             return
         }
         var extra: [String: String] = [:]
@@ -343,18 +327,21 @@ final class ProviderSettingsWindowController: NSWindowController {
                 extra[entry.key] = value
             }
         }
-        if let unit = unitOverrideField?.stringValue.trimmingCharacters(in: .whitespacesAndNewlines),
-           !unit.isEmpty {
+        if let unit = unitOverrideField?.stringValue
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+            !unit.isEmpty {
             extra["unit"] = unit
         }
         var baseURL: String?
-        if let base = baseURLField?.stringValue.trimmingCharacters(in: .whitespacesAndNewlines),
-           !base.isEmpty {
+        if let base = baseURLField?.stringValue
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+            !base.isEmpty {
             baseURL = base
         }
 
         // Empty display-name field keeps the built-in name.
-        var displayName = displayNameField?.stringValue.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        var displayName = displayNameField?.stringValue
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if displayName.isEmpty {
             displayName = row.kind.displayName
         }
@@ -369,12 +356,14 @@ final class ProviderSettingsWindowController: NSWindowController {
         do {
             try UsageConfigStore.upsert(config)
         } catch {
-            presentError(message: "Cannot write \(UsageConfigStore.configFile()): \(error)")
+            presentSettingsError(
+                "Cannot write \(UsageConfigStore.configFile()): \(error)"
+            )
             return
         }
         onRefresh()
         // The triggered poll lands within a couple of seconds; refresh the
-        // Current line (and badges) once it has landed.
+        // Current line once it has landed.
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
             self?.reload()
         }
@@ -392,7 +381,9 @@ final class ProviderSettingsWindowController: NSWindowController {
         do {
             _ = try UsageConfigStore.remove(providerKey: row.kind.type)
         } catch {
-            presentError(message: "Cannot update \(UsageConfigStore.configFile()): \(error)")
+            presentSettingsError(
+                "Cannot update \(UsageConfigStore.configFile()): \(error)"
+            )
             return
         }
         onRefresh()
@@ -404,8 +395,9 @@ final class ProviderSettingsWindowController: NSWindowController {
     /// 10s floor mirrors `UsageMonitor.effectivePollInterval()`, which
     /// ignores anything smaller.
     @objc private func pollSecondsChanged() {
-        guard let text = pollSecondsField?.stringValue.trimmingCharacters(in: .whitespaces),
-              let seconds = Int(text), seconds >= 10 else {
+        guard let text = pollSecondsField?.stringValue
+            .trimmingCharacters(in: .whitespaces),
+            let seconds = Int(text), seconds >= 10 else {
             // Invalid input: snap the field back to the effective value.
             pollSecondsField?.stringValue = String(
                 Int(UsageMonitor.effectivePollInterval().rounded())
@@ -417,7 +409,9 @@ final class ProviderSettingsWindowController: NSWindowController {
         do {
             try UsageStore.writeUsage(file)
         } catch {
-            presentError(message: "Cannot update \(UsageConfigStore.configFile()): \(error)")
+            presentSettingsError(
+                "Cannot update \(UsageConfigStore.configFile()): \(error)"
+            )
         }
     }
 
@@ -428,35 +422,18 @@ final class ProviderSettingsWindowController: NSWindowController {
             self?.reload()
         }
     }
-
-    @objc private func closeClicked() {
-        window?.orderOut(nil)
-    }
-
-    private func presentError(message: String) {
-        let alert = NSAlert()
-        alert.messageText = "Usage Providers"
-        alert.informativeText = message
-        alert.alertStyle = .warning
-        alert.addButton(withTitle: "OK")
-        alert.runModal()
-    }
-}
-
-extension ProviderSettingsWindowController: NSWindowDelegate {
-    func windowWillClose(_ notification: Notification) {
-        // Keep the controller alive for reopen; nothing to release.
-    }
 }
 
 // MARK: - Table view
 
-extension ProviderSettingsWindowController: NSTableViewDelegate, NSTableViewDataSource {
+extension ProviderSettingsPane: NSTableViewDelegate, NSTableViewDataSource {
     func numberOfRows(in tableView: NSTableView) -> Int {
         rows.count
     }
 
-    func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
+    func tableView(
+        _ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int
+    ) -> NSView? {
         guard row < rows.count else { return nil }
         let rowState = rows[row]
         let stateText: String
@@ -471,8 +448,8 @@ extension ProviderSettingsWindowController: NSTableViewDelegate, NSTableViewData
         }
 
         let container = NSStackView(views: [
-            makeLabel(rowState.kind.displayName, color: .labelColor),
-            makeLabel(stateText, color: stateColor),
+            makeSettingsLabel(rowState.kind.displayName, color: .labelColor),
+            makeSettingsLabel(stateText, color: stateColor),
         ])
         container.orientation = .horizontal
         container.distribution = .fill

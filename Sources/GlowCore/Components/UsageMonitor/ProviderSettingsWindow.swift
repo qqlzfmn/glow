@@ -150,9 +150,10 @@ final class ProviderSettingsWindowController: NSWindowController {
         buttonRow.orientation = .horizontal
         buttonRow.spacing = 12
 
-        let badgeControls = BadgeAppearanceControls(
-            frame: NSRect(x: 0, y: 0, width: 536, height: 44)
-        )
+        let badgeControls = BadgeAppearanceControls(frame: .zero)
+        // Autoresizing-mask constraints from the initial frame fight the
+        // explicit constraints below and crowd the bottom row off-window.
+        badgeControls.translatesAutoresizingMaskIntoConstraints = false
         badgeControls.onApply = { [weak self] in self?.onBadgeChange() }
         self.badgeControls = badgeControls
 

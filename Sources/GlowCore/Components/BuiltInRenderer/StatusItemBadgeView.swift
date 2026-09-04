@@ -14,6 +14,11 @@ final class StatusItemBadgeView: NSView {
 
     var lampColor: NSColor = .systemGreen
     var lampDimmed: Bool = false
+    /// Rendering overrides from usage.json (`badge`); `.standard` keeps
+    /// the built-in look.
+    var badgeAppearance: BadgeAppearance = .standard {
+        didSet { invalidateIntrinsicContentSize(); needsDisplay = true }
+    }
     var segments: [Segment] = [] {
         didSet { invalidateIntrinsicContentSize(); needsDisplay = true }
     }
@@ -22,9 +27,27 @@ final class StatusItemBadgeView: NSView {
     private let lampGap: CGFloat = 6          // lamp ↔ first hairline
     private let hairlineGap: CGFloat = 6      // hairline ↔ segment content
     private let segmentPadding: CGFloat = 2   // content inset inside a cell
-    private let valueFont = NSFont.systemFont(ofSize: 11, weight: .regular)
-    private let labelFont = NSFont.systemFont(ofSize: 7.5)
-    private let separatorColor = NSColor.labelColor
+
+    private var valueFont: NSFont {
+        NSFont.systemFont(
+            ofSize: badgeAppearance.valueFontSize ?? BadgeAppearance.defaultValueFontSize,
+            weight: .regular
+        )
+    }
+    private var labelFont: NSFont {
+        NSFont.systemFont(
+            ofSize: badgeAppearance.labelFontSize ?? BadgeAppearance.defaultLabelFontSize
+        )
+    }
+    /// `lineSpacing` is split above/below the badge center so the block
+    /// stays vertically centered as it spreads.
+    private var lineSpread: CGFloat { (badgeAppearance.lineSpacing ?? 0) / 2 }
+
+    /// Hex override or the dynamic system color that follows the menu
+    /// bar appearance.
+    private func foregroundColor(_ hex: String?) -> NSColor {
+        hex.flatMap { NSColor(hexRGBA: $0) } ?? .labelColor
+    }
 
     override var intrinsicContentSize: NSSize {
         NSSize(width: ceil(fittingWidth()), height: super.intrinsicContentSize.height)
@@ -75,12 +98,12 @@ final class StatusItemBadgeView: NSView {
             // Value on top, label underneath, tight two-line block
             // vertically centered — both at full label color.
             (segment.value as NSString).draw(
-                at: NSPoint(x: x + (cellWidth - valueSize.width) / 2, y: midY + 1),
-                withAttributes: [.font: valueFont, .foregroundColor: NSColor.labelColor]
+                at: NSPoint(x: x + (cellWidth - valueSize.width) / 2, y: midY + 1 + lineSpread),
+                withAttributes: [.font: valueFont, .foregroundColor: foregroundColor(badgeAppearance.valueColor)]
             )
             (segment.label as NSString).draw(
-                at: NSPoint(x: x + (cellWidth - labelSize.width) / 2, y: midY - labelSize.height),
-                withAttributes: [.font: labelFont, .foregroundColor: NSColor.labelColor]
+                at: NSPoint(x: x + (cellWidth - labelSize.width) / 2, y: midY - labelSize.height - lineSpread),
+                withAttributes: [.font: labelFont, .foregroundColor: foregroundColor(badgeAppearance.labelColor)]
             )
             x += cellWidth + segmentPadding * 2
         }
@@ -88,7 +111,15 @@ final class StatusItemBadgeView: NSView {
 
     private func drawHairline(at x: CGFloat, midY: CGFloat) {
         let line = NSRect(x: x, y: midY - 8, width: 1, height: 16)
-        separatorColor.setFill()
+        foregroundColor(badgeAppearance.separatorColor).setFill()
         NSBezierPath(rect: line).fill()
+    }
+}
+
+extension NSColor {
+    /// `#RRGGBB` / `RRGGBB` (case-insensitive); nil on anything else.
+    convenience init?(hexRGBA text: String) {
+        guard let rgb = BadgeAppearance.parseHex(text) else { return nil }
+        self.init(red: rgb.red, green: rgb.green, blue: rgb.blue, alpha: 1)
     }
 }

@@ -45,9 +45,14 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     /// window triggers an immediate UsageMonitor re-discovery + poll.
     private func showProviderSettings() {
         if providerSettings == nil {
-            providerSettings = ProviderSettingsWindowController(onRefresh: { [weak self] in
-                self?.usageMonitor?.refreshNow()
-            })
+            providerSettings = ProviderSettingsWindowController(
+                onRefresh: { [weak self] in
+                    self?.usageMonitor?.refreshNow()
+                },
+                onBadgeChange: { [weak statusBarController] in
+                    statusBarController?.updateUsageBadge()
+                }
+            )
         }
         providerSettings?.showWindow(nil)
         providerSettings?.window?.makeKeyAndOrderFront(nil)

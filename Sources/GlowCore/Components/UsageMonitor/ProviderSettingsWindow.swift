@@ -44,10 +44,14 @@ final class ProviderSettingsWindowController: NSWindowController {
     /// Called after a save/delete; the host triggers UsageMonitor to
     /// re-discover and poll immediately.
     private let onRefresh: () -> Void
+    /// Called after badge appearance changes; the host redraws the menu
+    /// bar badge without waiting for the next poll.
+    private let onBadgeChange: () -> Void
 
     private var tableView: NSTableView?
     private var detailStack: NSStackView?
     private var pollSecondsField: NSTextField?
+    private var badgeControls: BadgeAppearanceControls?
     /// Live handles of the form fields of the currently displayed detail.
     private var fieldViews: [(key: String, field: NSTextField)] = []
     private var baseURLField: NSTextField?
@@ -55,10 +59,11 @@ final class ProviderSettingsWindowController: NSWindowController {
     /// Optional display-name override field of the current detail form.
     private var displayNameField: NSTextField?
 
-    init(onRefresh: @escaping () -> Void) {
+    init(onRefresh: @escaping () -> Void, onBadgeChange: @escaping () -> Void = {}) {
         self.onRefresh = onRefresh
+        self.onBadgeChange = onBadgeChange
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 560, height: 420),
+            contentRect: NSRect(x: 0, y: 0, width: 560, height: 470),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -145,6 +150,12 @@ final class ProviderSettingsWindowController: NSWindowController {
         buttonRow.orientation = .horizontal
         buttonRow.spacing = 12
 
+        let badgeControls = BadgeAppearanceControls(
+            frame: NSRect(x: 0, y: 0, width: 536, height: 44)
+        )
+        badgeControls.onApply = { [weak self] in self?.onBadgeChange() }
+        self.badgeControls = badgeControls
+
         for view in [listScrollView, detailScroll] {
             view.translatesAutoresizingMaskIntoConstraints = false
         }
@@ -152,18 +163,24 @@ final class ProviderSettingsWindowController: NSWindowController {
 
         content.addSubview(listScrollView)
         content.addSubview(detailScroll)
+        content.addSubview(badgeControls)
         content.addSubview(buttonRow)
 
         NSLayoutConstraint.activate([
             listScrollView.topAnchor.constraint(equalTo: content.topAnchor, constant: 12),
             listScrollView.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 12),
-            listScrollView.bottomAnchor.constraint(equalTo: buttonRow.topAnchor, constant: -12),
+            listScrollView.bottomAnchor.constraint(equalTo: badgeControls.topAnchor, constant: -12),
             listScrollView.widthAnchor.constraint(equalToConstant: 210),
 
             detailScroll.topAnchor.constraint(equalTo: content.topAnchor, constant: 12),
             detailScroll.leadingAnchor.constraint(equalTo: listScrollView.trailingAnchor, constant: 12),
             detailScroll.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -12),
-            detailScroll.bottomAnchor.constraint(equalTo: buttonRow.topAnchor, constant: -12),
+            detailScroll.bottomAnchor.constraint(equalTo: badgeControls.topAnchor, constant: -12),
+
+            badgeControls.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 12),
+            badgeControls.trailingAnchor.constraint(lessThanOrEqualTo: content.trailingAnchor, constant: -12),
+            badgeControls.bottomAnchor.constraint(equalTo: buttonRow.topAnchor, constant: -12),
+            badgeControls.heightAnchor.constraint(equalToConstant: 44),
 
             buttonRow.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 12),
             buttonRow.trailingAnchor.constraint(lessThanOrEqualTo: content.trailingAnchor, constant: -12),
@@ -183,10 +200,10 @@ final class ProviderSettingsWindowController: NSWindowController {
             explicit: UsageConfigStore.load(),
             snapshots: UsageStore.readUsage().providers
         )
-        if selectedIndex >= rows.count { selectedIndex = 0 }
         tableView?.reloadData()
         tableView?.selectRowIndexes(IndexSet(integer: selectedIndex), byExtendingSelection: false)
         rebuildDetail()
+        badgeControls?.reloadFromStore()
     }
 
     private func selectedRow() -> RowState? {

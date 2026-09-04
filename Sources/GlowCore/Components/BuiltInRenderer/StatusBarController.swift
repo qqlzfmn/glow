@@ -311,9 +311,13 @@ extension StatusBarController: NSMenuDelegate {
 
 extension StatusBarController {
     /// Re-read usage.json and feed the custom badge view. The status item
-    /// length grows/shrinks with the segment count.
+    /// length grows/shrinks with the segment count. Appearance overrides
+    /// ride along on the same file so settings-window changes apply on
+    /// the next update without a restart.
     func updateUsageBadge() {
-        let segments = UsageBadge.badgeSegments(for: UsageStore.readUsage())
+        let file = UsageStore.readUsage()
+        badgeView?.badgeAppearance = (file.badge ?? .standard).sanitized
+        let segments = UsageBadge.badgeSegments(for: file)
         usageBadgeText = segments
             .map { "\($0.label) \($0.value)" }
             .joined(separator: "│")

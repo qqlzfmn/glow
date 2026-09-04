@@ -13,11 +13,15 @@ struct UsageFile: Codable {
     /// Poll cadence override in seconds (settings window); the env var
     /// `GLOW_USAGE_POLL_SECONDS` still wins. nil = default 300.
     var pollSeconds: Int?
+    /// Menu bar badge rendering overrides (settings window); nil means
+    /// all built-in defaults.
+    var badge: BadgeAppearance?
     /// Keyed by stable provider key (e.g. `glm`, `deepseek`).
     var providers: [String: ProviderUsage]
 
     enum CodingKeys: String, CodingKey {
         case order
+        case badge
         case badgeProvider = "badge_provider"
         case pollSeconds = "poll_seconds"
         case providers

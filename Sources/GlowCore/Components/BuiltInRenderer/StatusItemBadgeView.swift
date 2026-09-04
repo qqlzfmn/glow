@@ -1,7 +1,7 @@
 import AppKit
 
 /// Custom drawing surface for the menu bar item: lamp on the left, then a
-/// faint vertical hairline, then usage segments — value on top, label
+/// vertical hairline, then usage segments — value on top, label
 /// underneath (iStat-style). The last segment carries no trailing
 /// separator, so the badge ends flush with its content.
 final class StatusItemBadgeView: NSView {
@@ -24,7 +24,7 @@ final class StatusItemBadgeView: NSView {
     private let segmentPadding: CGFloat = 2   // content inset inside a cell
     private let valueFont = NSFont.systemFont(ofSize: 11, weight: .regular)
     private let labelFont = NSFont.systemFont(ofSize: 7.5)
-    private let separatorColor = NSColor.labelColor.withAlphaComponent(0.30)
+    private let separatorColor = NSColor.labelColor
 
     override var intrinsicContentSize: NSSize {
         NSSize(width: ceil(fittingWidth()), height: super.intrinsicContentSize.height)
@@ -72,22 +72,22 @@ final class StatusItemBadgeView: NSView {
             let labelSize = (segment.label as NSString).size(withAttributes: [.font: labelFont])
             let cellWidth = max(valueSize.width, labelSize.width)
 
-            // Value on top (bright), label underneath (secondary), tight
-            // two-line block vertically centered.
+            // Value on top, label underneath, tight two-line block
+            // vertically centered — both at full label color.
             (segment.value as NSString).draw(
                 at: NSPoint(x: x + (cellWidth - valueSize.width) / 2, y: midY + 1),
                 withAttributes: [.font: valueFont, .foregroundColor: NSColor.labelColor]
             )
             (segment.label as NSString).draw(
-                at: NSPoint(x: x + (cellWidth - labelSize.width) / 2, y: midY - labelSize.height - 1),
-                withAttributes: [.font: labelFont, .foregroundColor: NSColor.secondaryLabelColor]
+                at: NSPoint(x: x + (cellWidth - labelSize.width) / 2, y: midY - labelSize.height),
+                withAttributes: [.font: labelFont, .foregroundColor: NSColor.labelColor]
             )
             x += cellWidth + segmentPadding * 2
         }
     }
 
     private func drawHairline(at x: CGFloat, midY: CGFloat) {
-        let line = NSRect(x: x, y: midY - 6, width: 1, height: 12)
+        let line = NSRect(x: x, y: midY - 8, width: 1, height: 16)
         separatorColor.setFill()
         NSBezierPath(rect: line).fill()
     }

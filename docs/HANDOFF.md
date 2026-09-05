@@ -14,7 +14,8 @@ Glow 是 macOS 菜单栏的 AI 编程助手环境状态面板：Agent（Codex / 
 - 测试：181 个 Swift Testing 测试 / 24 套件，全绿（`StateDirEnvLock` 见下方陷阱）
 - 结构：仓库根 SPM 包（`Sources/GlowCore/{Kernel,Components}` + `Sources/Glow` 薄入口 + `Tests/GlowTests`）
 - M2a/M2b 已完成：provider-usage + badge 外观自定义（详见下方 M2 节与 docs/PLUGINS.md）
-- 已发布：v0.1.3（arm64 + x86_64 双架构）；nightly release 双架构自动构建上传
+- 已发布：v0.2.0（2026-09-05，arm64 + x86_64 双架构，设置窗 App 级重构）；
+  nightly release 双架构自动构建上传
   （pre-push hook）；本机 `/Applications/Glow.app` 运行中，launchd
   `com.qqlzfmn.glow.app` 自启
 - 设置页 App 级重构：**已于 2026-09-05 落地**（`Components/Settings/`，

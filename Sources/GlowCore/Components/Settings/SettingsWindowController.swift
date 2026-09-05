@@ -80,7 +80,7 @@ final class SettingsWindowController: NSWindowController {
             // the widest title, so the sidebar width derives from content,
             // not constants.
             button.leadingAnchor.constraint(
-                equalTo: sidebar.leadingAnchor, constant: 16
+                equalTo: sidebar.leadingAnchor, constant: 10
             ).isActive = true
             button.trailingAnchor.constraint(
                 equalTo: sidebar.trailingAnchor, constant: -10
@@ -127,13 +127,23 @@ final class SettingsWindowController: NSWindowController {
 
     // MARK: - Switching
 
+    /// Borderless entry button with a little intrinsic-width headroom so
+    /// the indented title never truncates against the drawing rect.
+    private final class SidebarButton: NSButton {
+        override var intrinsicContentSize: NSSize {
+            var size = super.intrinsicContentSize
+            size.width += 8
+            return size
+        }
+    }
+
     /// Borderless, layer-backed sidebar entry; the selected entry gets an
     /// accent-filled rounded background (texturedRounded's tint proved
     /// indistinguishable from unselected entries on a dark menu bar app).
     /// Width comes from the entries' intrinsic sizes (widest title wins);
     /// the controller pins both edges to the stack so entries stay equal.
     private func sidebarButton(title: String, tag: Int) -> NSButton {
-        let button = NSButton(
+        let button = SidebarButton(
             title: title,
             target: self,
             action: #selector(sidebarClicked(_:))
@@ -144,6 +154,9 @@ final class SettingsWindowController: NSWindowController {
         button.wantsLayer = true
         button.layer?.cornerRadius = 6
         button.contentTintColor = .labelColor
+        // From birth: the indent must be part of the intrinsic size, or the
+        // selected (indented) title truncates inside the entry width.
+        button.attributedTitle = Self.sidebarTitle(title, selected: false)
         button.heightAnchor.constraint(equalToConstant: 28).isActive = true
         return button
     }
@@ -170,18 +183,25 @@ final class SettingsWindowController: NSWindowController {
                 ? NSColor.controlAccentColor.cgColor
                 : NSColor.clear.cgColor
             button.contentTintColor = selected ? .controlAccentColor : .labelColor
-            // Accent background needs white text for contrast; unselected
-            // entries keep the adaptive label color.
-            button.attributedTitle = NSAttributedString(
-                string: button.title,
-                attributes: [
-                    .foregroundColor: selected
-                        ? NSColor.white
-                        : NSColor.labelColor,
-                    .font: NSFont.systemFont(ofSize: 13),
-                ]
+            // Accent background needs white text for contrast; the indent
+            // keeps the title away from the highlight's left edge.
+            button.attributedTitle = Self.sidebarTitle(
+                button.title, selected: selected
             )
         }
         panes[index].paneWillAppear()
+    }
+
+    private static func sidebarTitle(
+        _ title: String, selected: Bool
+    ) -> NSAttributedString {
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.firstLineHeadIndent = 8
+        paragraph.headIndent = 8
+        return NSAttributedString(string: title, attributes: [
+            .foregroundColor: selected ? NSColor.white : NSColor.labelColor,
+            .font: NSFont.systemFont(ofSize: 13),
+            .paragraphStyle: paragraph,
+        ])
     }
 }

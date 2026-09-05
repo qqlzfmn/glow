@@ -1,5 +1,12 @@
 import AppKit
 
+/// Flipped document stack: y=0 is the top edge, so a short form stays
+/// glued to the top of the detail column and the scroll origin at rest
+/// is always (0, 0).
+private final class TopAlignedStackView: NSStackView {
+    override var isFlipped: Bool { true }
+}
+
 /// Providers section: the left table lists every supported provider type
 /// with its configuration state (configured / not configured); the right
 /// pane renders a dynamic credential form per provider kind. Saving writes
@@ -49,6 +56,7 @@ final class ProviderSettingsPane: NSView, SettingsPane {
     private let onRefresh: () -> Void
 
     private var tableView: NSTableView?
+    private var detailScroll: NSScrollView!
     private var detailStack: NSStackView?
     private var pollSecondsField: NSTextField?
     /// Bottom action row of the detail column; Remove only applies to
@@ -99,9 +107,10 @@ final class ProviderSettingsPane: NSView, SettingsPane {
         tableView = table
 
         let detailScroll = NSScrollView()
+        self.detailScroll = detailScroll
         detailScroll.hasVerticalScroller = true
         detailScroll.borderType = .noBorder
-        let stack = NSStackView()
+        let stack = TopAlignedStackView()
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 8
@@ -113,17 +122,11 @@ final class ProviderSettingsPane: NSView, SettingsPane {
         stack.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             // Pin the width or the stack collapses to zero inside the
-            // scroll view and the whole detail pane renders blank.
+            // scroll view and the whole detail pane renders blank. Flipped
+            // origin keeps the form glued to the top for short content.
             stack.leadingAnchor.constraint(equalTo: detailScroll.contentView.leadingAnchor),
             stack.trailingAnchor.constraint(equalTo: detailScroll.contentView.trailingAnchor),
             stack.topAnchor.constraint(equalTo: detailScroll.contentView.topAnchor),
-            // Fill the viewport when content is short so the scroll origin
-            // stays at the top (a short document otherwise keeps a stale
-            // scroll offset and renders vertically centered); tall content
-            // simply scrolls.
-            stack.heightAnchor.constraint(
-                greaterThanOrEqualTo: detailScroll.contentView.heightAnchor
-            ),
         ])
         detailStack = stack
 
@@ -220,6 +223,10 @@ final class ProviderSettingsPane: NSView, SettingsPane {
             IndexSet(integer: selectedIndex), byExtendingSelection: false
         )
         rebuildDetail()
+        // Switching providers swaps document height; a stale scroll offset
+        // would visually push the shorter form down — snap back to the top
+        // (the flipped document's origin is its top edge).
+        detailScroll.documentView?.scroll(NSPoint(x: 0, y: 0))
     }
 
     private func selectedRow() -> RowState? {
@@ -469,10 +476,20 @@ extension ProviderSettingsPane: NSTableViewDelegate, NSTableViewDataSource {
         let rowState = rows[row]
         // Configured providers use the full-strength label color; the rest
         // stay dim — no per-row status marker needed.
-        return makeSettingsLabel(
+        let label = makeSettingsLabel(
             rowState.kind.displayName,
-            color: rowState.state == .configured ? .labelColor : .secondaryLabelColor
+            color: rowState.state == .configured ? .labelColor : .tertiaryLabelColor
         )
+        label.translatesAutoresizingMaskIntoConstraints = false
+        // Center vertically, keep a small leading inset (the raw cell view
+        // otherwise draws the text flush against the row edge).
+        let container = NSView()
+        container.addSubview(label)
+        NSLayoutConstraint.activate([
+            label.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 8),
+            label.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+        ])
+        return container
     }
 
     func tableViewSelectionDidChange(_ notification: Notification) {

@@ -80,7 +80,7 @@ final class SettingsWindowController: NSWindowController {
             // the widest title, so the sidebar width derives from content,
             // not constants.
             button.leadingAnchor.constraint(
-                equalTo: sidebar.leadingAnchor, constant: 10
+                equalTo: sidebar.leadingAnchor, constant: 16
             ).isActive = true
             button.trailingAnchor.constraint(
                 equalTo: sidebar.trailingAnchor, constant: -10

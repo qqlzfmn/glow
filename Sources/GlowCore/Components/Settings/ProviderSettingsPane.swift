@@ -117,7 +117,13 @@ final class ProviderSettingsPane: NSView, SettingsPane {
             stack.leadingAnchor.constraint(equalTo: detailScroll.contentView.leadingAnchor),
             stack.trailingAnchor.constraint(equalTo: detailScroll.contentView.trailingAnchor),
             stack.topAnchor.constraint(equalTo: detailScroll.contentView.topAnchor),
-            stack.bottomAnchor.constraint(lessThanOrEqualTo: detailScroll.contentView.bottomAnchor),
+            // Fill the viewport when content is short so the scroll origin
+            // stays at the top (a short document otherwise keeps a stale
+            // scroll offset and renders vertically centered); tall content
+            // simply scrolls.
+            stack.heightAnchor.constraint(
+                greaterThanOrEqualTo: detailScroll.contentView.heightAnchor
+            ),
         ])
         detailStack = stack
 
@@ -461,29 +467,12 @@ extension ProviderSettingsPane: NSTableViewDelegate, NSTableViewDataSource {
     ) -> NSView? {
         guard row < rows.count else { return nil }
         let rowState = rows[row]
-        let stateText: String
-        let stateColor: NSColor
-        switch rowState.state {
-        case .configured:
-            // Short marker: the 170pt list cannot fit "configured" beside
-            // longer provider names without truncation.
-            stateText = "✓"
-            stateColor = .systemGreen
-        case .notConfigured:
-            stateText = "—"
-            stateColor = .tertiaryLabelColor
-        }
-
-        let container = NSStackView(views: [
-            makeSettingsLabel(rowState.kind.displayName, color: .labelColor),
-            makeSettingsLabel(stateText, color: stateColor),
-        ])
-        container.orientation = .horizontal
-        container.distribution = .fill
-        container.spacing = 6
-        // Keep the trailing marker clear of the bezel border.
-        container.edgeInsets = NSEdgeInsets(top: 0, left: 0, bottom: 0, right: 8)
-        return container
+        // Configured providers use the full-strength label color; the rest
+        // stay dim — no per-row status marker needed.
+        return makeSettingsLabel(
+            rowState.kind.displayName,
+            color: rowState.state == .configured ? .labelColor : .secondaryLabelColor
+        )
     }
 
     func tableViewSelectionDidChange(_ notification: Notification) {

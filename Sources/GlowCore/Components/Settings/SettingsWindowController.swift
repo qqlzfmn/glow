@@ -1,5 +1,38 @@
 import AppKit
 
+/// Settings window with working text-editing shortcuts. LSUIElement apps
+/// have no menu bar, so the hidden main-menu key equivalents never get
+/// registered; intercept Cmd-based edit commands here instead and route
+/// them through the responder chain (nil target = field editor).
+private final class KeyEquivalentWindow: NSWindow {
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        let flags = event.modifierFlags
+        let key = event.charactersIgnoringModifiers?.lowercased() ?? ""
+        guard !key.isEmpty,
+              flags.contains(.command),
+              !flags.contains(.option),
+              !flags.contains(.control) else {
+            return super.performKeyEquivalent(with: event)
+        }
+        let shift = flags.contains(.shift)
+        switch key {
+        case "x": return sendEditAction(#selector(NSText.cut(_:)))
+        case "c": return sendEditAction(#selector(NSText.copy(_:)))
+        case "v": return sendEditAction(#selector(NSText.paste(_:)))
+        case "a": return sendEditAction(#selector(NSText.selectAll(_:)))
+        case "z":
+            return sendEditAction(shift ? Selector(("redo:")) : Selector(("undo:")))
+        default: return super.performKeyEquivalent(with: event)
+        }
+    }
+
+    /// Nil target: AppKit walks the responder chain from the first
+    /// responder, so the field editor receives the action.
+    private func sendEditAction(_ selector: Selector) -> Bool {
+        NSApp.sendAction(selector, to: nil, from: self)
+    }
+}
+
 /// A single section of the settings window. Panes are created once and kept
 /// alive (switching only toggles `isHidden`), so their state survives
 /// section switches; `paneWillAppear` lets a pane re-read on-disk state
@@ -20,7 +53,7 @@ final class SettingsWindowController: NSWindowController {
     private var sidebarButtons: [NSButton] = []
 
     init(onRefresh: @escaping () -> Void, onBadgeChange: @escaping () -> Void) {
-        let window = NSWindow(
+        let window = KeyEquivalentWindow(
             contentRect: NSRect(x: 0, y: 0, width: 640, height: 480),
             styleMask: [.titled, .closable],
             backing: .buffered,

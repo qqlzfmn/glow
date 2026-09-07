@@ -60,11 +60,20 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// LSUIElement apps have no menu bar, so the standard Edit shortcuts
-    /// (Cmd+C/V/X/A) never fire in text fields. Install a main menu that is
-    /// never shown but provides the key equivalents for the Settings window.
+    /// never fire in text fields. Install a main menu that is never shown
+    /// but provides the key equivalents for the Settings window.
     private func installHiddenEditMenu() {
         let mainMenu = NSMenu()
+        // The default autoenablesItems would disable target-less items,
+        // silently killing every key equivalent — keep them always active
+        // so the responder chain (field editor) receives them.
+        mainMenu.autoenablesItems = false
         let edit = NSMenu(title: "Edit")
+        edit.autoenablesItems = false
+        // undo:/redo: are NSResponder Objective-C actions (not exposed in
+        // Swift) — route them via the responder chain to the field editor.
+        edit.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
+        edit.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "Z")
         edit.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
         edit.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
         edit.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")

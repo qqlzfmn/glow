@@ -14,9 +14,10 @@ Glow 是 macOS 菜单栏的 AI 编程助手环境状态面板：Agent（Codex / 
 - 测试：181 个 Swift Testing 测试 / 24 套件，全绿（`StateDirEnvLock` 见下方陷阱）
 - 结构：仓库根 SPM 包（`Sources/GlowCore/{Kernel,Components}` + `Sources/Glow` 薄入口 + `Tests/GlowTests`）
 - M2a/M2b 已完成：provider-usage + badge 外观自定义（详见下方 M2 节与 docs/PLUGINS.md）
-- 已发布：v0.2.1（2026-09-07，arm64 + x86_64 双架构；修复 pi/omp
-  turn_end 无 Stop 转发导致的任务后绿灯残留）；v0.2.0 含设置窗 App
-  级重构（2026-09-05）；nightly release 双架构自动构建上传
+- 已发布：v0.2.2（2026-09-07，arm64 + x86_64；状态灯第一性原理校准——
+  非终止失败不红/done 废弃/permission 明确黄 + 设置窗快捷键修复）；
+  v0.2.1 含 pi/omp turn_end 修复；v0.2.0 含设置窗 App 级重构；
+  nightly release 双架构自动构建上传
   （pre-push hook）；本机 `/Applications/Glow.app` 运行中，launchd
   `com.qqlzfmn.glow.app` 自启
 - 设置页 App 级重构：**已于 2026-09-05 落地**（`Components/Settings/`，

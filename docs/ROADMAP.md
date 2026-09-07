@@ -47,9 +47,8 @@ Glow 是 AI 编程助手的菜单栏环境状态面板，从"agent 状态灯"演
   级——侧边栏四分区（App：开机自启；外观：badge 外观；Provider：
   凭据配置 + 轮询间隔；Hooks：agent 开关），入口为菜单顶层
   Settings…（位于 Install Hooks 下）。实现：`Components/Settings/`，
-  计划：`docs/plans/2026-09-04-app-settings-window-plan.md`（执行时
-  两点拍板调整：Settings… 移至 Install Hooks 下；poll_seconds 归
-  Providers 分区）。
+  执行时两点拍板调整：Settings… 移至 Install Hooks 下；poll_seconds 归
+  Providers 分区。
 
 ## 待定项（后续细化）
 

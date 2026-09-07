@@ -149,8 +149,7 @@ M2a 交付（数据源：用户选定 API usage 端点路线；展示：灯图�
    （secret 字段 NSSecureTextField、Display name 覆盖、Unit 仅余额类、
    Base URL 仅 usesBaseURL 类且 placeholder 显示默认完整端点），保存/删除
    走 `UsageConfigStore` 并触发 `UsageMonitor.refreshNow()` 立即生效，
-   窗口 2 秒后自动刷新 Current 行。计划文档：
-   `docs/plans/2026-09-02-usage-gui-plan.md`（Phase 2 主面板待用户拍板）。
+   窗口 2 秒后自动刷新 Current 行（原 Phase 2 主面板已由 App 级设置窗取代）。
 7. **UI 细节迭代（用户反馈驱动）**：badge 改为自绘
    `StatusItemBadgeView`（iStat 式两行：值上/标签下，发丝竖线更浅、末段
    无尾线）；窗口标签全称化（5 Hours/1 Week/1 Month）；Usage 菜单 provider

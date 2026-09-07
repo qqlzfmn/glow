@@ -38,6 +38,19 @@ enum HookSupport {
         String(data: FileHandle.standardInput.readDataToEndOfFile(), encoding: .utf8) ?? ""
     }
 
+    /// Parse hook stdin JSON. Empty input yields `[:]`; non-JSON text is
+    /// kept verbatim under `"raw"` (so the payload is never silently
+    /// dropped). Shared by every hook adapter.
+    static func parsePayload(_ stdinText: String) -> [String: Any] {
+        let trimmed = stdinText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return [:] }
+        if let data = trimmed.data(using: .utf8),
+           let parsed = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            return parsed
+        }
+        return ["raw": trimmed]
+    }
+
     /// Shared tail of every hook adapter: persist the signal and print the result.
     /// Persist errors are reported on stderr and yield exit code 1 — never silent.
     @discardableResult

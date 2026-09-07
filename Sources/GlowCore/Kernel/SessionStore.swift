@@ -85,34 +85,12 @@ enum SessionStore {
     /// Missing file and malformed JSON yield an empty state, but a malformed
     /// (non-empty) file is traced to stderr — silent data loss hides bugs.
     private static func readSessionFile() -> SessionFile {
-        guard let data = FileManager.default.contents(atPath: sessionFile) else {
-            return SessionFile(sessions: [:])
-        }
-        do {
-            return try JSONDecoder().decode(SessionFile.self, from: data)
-        } catch {
-            fputs("glow: corrupt sessions.json ignored (\(error.localizedDescription))\n", stderr)
-            return SessionFile(sessions: [:])
-        }
+        JSONFileIO.read(at: sessionFile, name: "sessions.json")
+            ?? SessionFile(sessions: [:])
     }
     private static func writeSessionFile(_ state: SessionFile) throws {
         do {
-            try FileManager.default.createDirectory(
-                atPath: stateDir, withIntermediateDirectories: true
-            )
-        } catch {
-            throw SessionStoreError.writeFailed("cannot create state dir \(stateDir): \(error)")
-        }
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes]
-        let data: Data
-        do {
-            data = try encoder.encode(state)
-        } catch {
-            throw SessionStoreError.writeFailed("cannot encode session state: \(error)")
-        }
-        do {
-            try data.write(to: URL(fileURLWithPath: sessionFile), options: .atomic)
+            try JSONFileIO.write(state, to: sessionFile, stateDir: stateDir)
         } catch {
             throw SessionStoreError.writeFailed("cannot write \(sessionFile): \(error)")
         }

@@ -27,23 +27,12 @@ enum ClaudeCodeHookAdapter {
     /// Parse hook input from argv + stdin JSON.
     static func readHookInput(argv: [String], stdinText: String) -> HookInput {
         var eventName: String? = eventFromArgs(argv)
-        var payload: [String: Any] = [:]
-
-        let trimmed = stdinText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmed.isEmpty {
-            if let data = trimmed.data(using: .utf8),
-               let parsed = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                payload = parsed
-                if eventName == nil {
-                    eventName = (parsed["event"] as? String) ?? (parsed["hook_event_name"] as? String)
-                }
-            } else {
-                payload = ["raw": trimmed]
-            }
+        let payload = HookSupport.parsePayload(stdinText)
+        if eventName == nil {
+            eventName = (payload["event"] as? String)
+                ?? (payload["hook_event_name"] as? String)
         }
-
-        let resolvedEventName = eventName ?? "Stop"
-        return HookInput(eventName: resolvedEventName, payload: payload)
+        return HookInput(eventName: eventName ?? "Stop", payload: payload)
     }
 
     /// Determine signal from hook input. `nil` means "no state change" —

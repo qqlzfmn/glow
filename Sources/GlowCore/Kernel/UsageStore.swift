@@ -35,28 +35,13 @@ enum UsageStore {
     // MARK: - File IO
 
     private static func readUsageFile() -> UsageFile {
-        guard let data = FileManager.default.contents(atPath: usageFile) else {
-            return UsageFile(providers: [:])
-        }
-        do {
-            return try JSONDecoder().decode(UsageFile.self, from: data)
-        } catch {
-            fputs("glow: corrupt usage.json ignored (\(error.localizedDescription))\n", stderr)
-            return UsageFile(providers: [:])
-        }
+        JSONFileIO.read(at: usageFile, name: "usage.json")
+            ?? UsageFile(providers: [:])
     }
 
     private static func writeUsageFile(_ file: UsageFile) throws {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes]
-        let data: Data
         do {
-            data = try encoder.encode(file)
-        } catch {
-            throw UsageStoreError.writeFailed("cannot encode usage state: \(error)")
-        }
-        do {
-            try data.write(to: URL(fileURLWithPath: usageFile), options: .atomic)
+            try JSONFileIO.write(file, to: usageFile, stateDir: StatePaths.stateDir)
         } catch {
             throw UsageStoreError.writeFailed("cannot write \(usageFile): \(error)")
         }

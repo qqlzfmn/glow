@@ -27,28 +27,18 @@ enum CodexHookAdapter {
     /// Parse hook input from argv + stdin JSON.
     static func readHookInput(argv: [String], stdinText: String, environ: [String: String]) -> HookInput {
         var eventName: String? = eventFromArgs(argv)
-        var payload: [String: Any] = [:]
-
-        let trimmed = stdinText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmed.isEmpty {
-            if let data = trimmed.data(using: .utf8),
-               let parsed = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                payload = parsed
-                // event name from payload if not already known from args
-                if eventName == nil {
-                    eventName = eventFromPayload(payload)
-                }
-            } else {
-                payload = ["raw": trimmed]
-            }
+        let payload = HookSupport.parsePayload(stdinText)
+        // Event name from payload if not already known from args.
+        if eventName == nil {
+            eventName = eventFromPayload(payload)
         }
-
-        let resolvedEventName = eventName
-            ?? environ["CODEX_HOOK_EVENT"]
-            ?? environ["HOOK_EVENT"]
-            ?? "Stop"
-
-        return HookInput(eventName: resolvedEventName, payload: payload)
+        return HookInput(
+            eventName: eventName
+                ?? environ["CODEX_HOOK_EVENT"]
+                ?? environ["HOOK_EVENT"]
+                ?? "Stop",
+            payload: payload
+        )
     }
 
     /// Determine signal from hook input.

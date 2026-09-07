@@ -159,11 +159,6 @@ final class StatusBarController: NSObject {
         return def?.color.nsColor ?? SignalColor.grey.nsColor
     }
 
-    private func dimColorForSignal(_ signal: String) -> NSColor {
-        let def = SIGNAL_DEFINITIONS[signal]
-        return def?.color.dimColor ?? SignalColor.grey.dimColor
-    }
-
 
     // MARK: - Actions
 

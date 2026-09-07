@@ -186,12 +186,15 @@ export default function ompObservabilityHook(pi: ExtensionAPI): void {
   pi.on("turn_start", (e, ctx) =>
     emit("turn_start", ctx, { turnIndex: e.turnIndex, timestamp: e.timestamp }),
   );
-  pi.on("turn_end", (e, ctx) =>
+  pi.on("turn_end", (e, ctx) => {
     emit("turn_end", ctx, {
       turnIndex: e.turnIndex,
       toolResults: e.toolResults.length,
-    }),
-  );
+    });
+    // 一轮应答完成：转发 Stop（Claude Code 同语义），清除本会话的
+    // 非阻断工作态，灯回到稳态；交互式会话不再绿闪残留。
+    forwardGlow("Stop", ctx);
+  });
   // print/headless 模式无 input 事件，用 agent_start 替补工作态起始信号
   pi.on("agent_start", (e, ctx) => {
     emit("agent_start", ctx, {});

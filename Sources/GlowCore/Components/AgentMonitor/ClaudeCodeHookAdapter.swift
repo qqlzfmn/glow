@@ -10,7 +10,6 @@ enum ClaudeCodeHookAdapter {
         "UserPromptSubmit": "thinking",
         "PreToolUse": "working",
         "PostToolUse": "tool_done",
-        "PostToolUseFailure": "blocked",
         "PreCompact": "working",
         "SubagentStart": "working",
         "SubagentStop": "tool_done",
@@ -47,8 +46,11 @@ enum ClaudeCodeHookAdapter {
         return HookInput(eventName: resolvedEventName, payload: payload)
     }
 
-    /// Determine signal from hook input.
-    static func chooseSignal(eventName: String, payload: [String: Any]) -> String {
+    /// Determine signal from hook input. `nil` means "no state change" —
+    /// used for non-terminal tool failures (the agent usually continues, so
+    /// per the lamp principle a failure only turns red when it stops; the
+    /// terminal failure is caught by `Stop` + `stop_reason`).
+    static func chooseSignal(eventName: String, payload: [String: Any]) -> String? {
         // 1. Explicit signal name in payload.
         if let explicit = (payload["signal"] ?? payload["signal_name"]) as? String {
             let normalized = explicit.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -64,7 +66,13 @@ enum ClaudeCodeHookAdapter {
             return mapped
         }
 
-        // 3. Event name mapping.
+        // 3. Non-terminal tool failure: keep the working state — red is
+        // reserved for failures that stop the agent.
+        if eventName == "PostToolUseFailure" {
+            return nil
+        }
+
+        // 4. Event name mapping.
         return eventToSignal[eventName] ?? "attention"
     }
 
@@ -97,7 +105,10 @@ enum ClaudeCodeHookAdapter {
     static func run(argv: [String]) -> Int32 {
         let environ = ProcessInfo.processInfo.environment
         let input = readHookInput(argv: argv, stdinText: HookSupport.readStdinText())
-        let signal = chooseSignal(eventName: input.eventName, payload: input.payload)
+        guard let signal = chooseSignal(eventName: input.eventName, payload: input.payload) else {
+            // No state change requested (e.g. non-terminal tool failure).
+            return 0
+        }
         let key = sessionKey(payload: input.payload, environ: environ)
         return HookSupport.applyAndReport(sessionKey: key, signal: signal)
     }

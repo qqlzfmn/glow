@@ -3,7 +3,7 @@ import Testing
 
 @Suite struct ClaudeCodeHookAdapterTests {
 
-    // MARK: - eventToSignal mapping (all 12 events)
+    // MARK: - eventToSignal mapping
 
     @Test func eventToSignalMapping() {
         let expected: [(String, String)] = [
@@ -11,7 +11,6 @@ import Testing
             ("UserPromptSubmit", "thinking"),
             ("PreToolUse", "working"),
             ("PostToolUse", "tool_done"),
-            ("PostToolUseFailure", "blocked"),
             ("PreCompact", "working"),
             ("SubagentStart", "working"),
             ("SubagentStop", "tool_done"),
@@ -26,6 +25,22 @@ import Testing
                 "\(event) should map to \(signal)"
             )
         }
+    }
+
+    // MARK: - Non-terminal tool failure keeps the working state
+
+    @Test func nonTerminalToolFailureKeepsState() {
+        // Per the lamp principle, red is reserved for failures that stop
+        // the agent; a single failed tool call keeps the working state.
+        // Explicit payload signals still win (e.g. credential_disabled).
+        #expect(
+            ClaudeCodeHookAdapter.chooseSignal(eventName: "PostToolUseFailure", payload: [:]) == nil
+        )
+        #expect(
+            ClaudeCodeHookAdapter.chooseSignal(
+                eventName: "PostToolUseFailure", payload: ["signal": "blocked"]
+            ) == "blocked"
+        )
     }
 
     // MARK: - Stop reason → blocked

@@ -63,7 +63,7 @@ final class SessionStoreTests {
     }
 
     @Test func aggregatePriorityAttentionSet() {
-        for signal in ["attention", "done"] {
+        for signal in ["attention"] {
             let sessions = [
                 "a": entry(signal),
                 "b": entry("working"),

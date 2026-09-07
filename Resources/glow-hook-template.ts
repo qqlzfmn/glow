@@ -108,6 +108,7 @@ function emit(
 function forwardGlow(
   eventName: string,
   ctx: ExtensionContext | undefined,
+  extra: Record<string, unknown> = {},
 ): void {
   if (!GLOW_BIN || !ctx) {
     if (!warnedMissingBin) {
@@ -128,6 +129,7 @@ function forwardGlow(
         input: JSON.stringify({
           session_id: resolveSessionId(ctx),
           cwd: ctx.cwd,
+          ...extra,
         }),
         stdio: ["pipe", "ignore", "pipe"],
         timeout: 5000,
@@ -252,7 +254,9 @@ export default function ompObservabilityHook(pi: ExtensionAPI): void {
       isError: e.isError,
       textChars,
     });
-    forwardGlow(e.isError ? "PostToolUseFailure" : "PostToolUse", ctx);
+    // 非终止型工具失败：agent 通常会继续 → 保持工作态（第一性原理：
+    // 失败导致停止才红；终止失败由后续事件/Stop 收敛）。
+    forwardGlow("PostToolUse", ctx);
   });
 
   // —— 权限与通知（Claude Code: PermissionRequest、Notification）——
@@ -316,6 +320,7 @@ export default function ompObservabilityHook(pi: ExtensionAPI): void {
       provider: e.provider,
       disabledCause: e.disabledCause,
     });
-    forwardGlow("PostToolUseFailure", ctx);
+    // 凭据禁用 = 实质失败（agent 无法继续调用工具）→ 显式红。
+    forwardGlow("PostToolUseFailure", ctx, { signal: "blocked" });
   });
 }

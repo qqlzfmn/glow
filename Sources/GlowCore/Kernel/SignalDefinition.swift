@@ -66,10 +66,6 @@ let SIGNAL_DEFINITIONS: [String: SignalDefinition] = [
         name: "blocked", summary: "Agent 遇到阻塞、失败或无法继续。",
         color: .red, isRepeating: true, flashColor: .red
     ),
-    "done": SignalDefinition(
-        name: "done", summary: "任务已完成。",
-        color: .yellow, isRepeating: true, flashColor: .yellow
-    ),
     "session_start": SignalDefinition(
         name: "session_start", summary: "Codex 会话开始。",
         color: .green, isRepeating: false, flashColor: .green
@@ -90,7 +86,7 @@ let SIGNAL_DEFINITIONS: [String: SignalDefinition] = [
 /// Single source of truth — both `aggregateSignal` and `SessionStore` read these sets.
 enum SignalSemantics {
     static let red: Set<String> = ["blocked"]
-    static let yellow: Set<String> = ["permission", "attention", "done"]
+    static let yellow: Set<String> = ["permission", "attention"]
     static let working: Set<String> = ["thinking", "working", "tool_done"]
     static let sessionEnd: Set<String> = ["session_end"]
     static let sessionClear: Set<String> = ["off"]

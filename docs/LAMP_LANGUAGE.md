@@ -10,8 +10,8 @@ The language is deliberately small: the current light must always describe the c
 | --- | --- | --- |
 | steady green | Codex is idle | Nothing |
 | flashing green | Codex is thinking, using tools, or otherwise working | Wait |
-| flashing yellow | Codex explicitly needs you to read or continue | Look at Codex when convenient |
-| flashing red | Codex needs permission, is blocked, or hit a failure | Look at Codex now |
+| flashing yellow | Codex needs permission (approve) or explicitly needs you to read or continue | Look at Codex when convenient |
+| flashing red | Codex is blocked, or hit a failure that stopped it | Look at Codex now |
 | off | Manual clear | Nothing |
 
 That is the whole language.
@@ -27,8 +27,7 @@ The CLI still exposes named signals so hooks and other agents can use stable wor
 | `working` | flashing green | Agent is using tools, editing, running commands, or testing |
 | `tool_done` | flashing green | A tool call finished, but the agent is still in an active workflow |
 | `attention` | flashing yellow | Agent explicitly expects you to read or continue |
-| `done` | flashing yellow | Task completed; read the final answer |
-| `permission` | flashing red | Codex requests permission |
+| `permission` | flashing yellow | Codex requests permission (approve to continue) |
 | `blocked` | flashing red | Agent cannot continue without intervention |
 | `session_start` | steady green | Codex session started and is idle |
 | `session_end` | current aggregate state after clearing the session | Codex session ended |
@@ -42,7 +41,7 @@ The CLI still exposes named signals so hooks and other agents can use stable wor
 | `UserPromptSubmit` | `thinking` | flashing green |
 | `PreToolUse` | `working` | flashing green |
 | `PostToolUse` | `tool_done` | flashing green |
-| `PermissionRequest` | `permission` | flashing red |
+| `PermissionRequest` | `permission` | flashing yellow |
 | `Stop` | `turn_end` | clears non-urgent session state |
 | `SessionEnd` | `session_end` | clears the session, then aggregate state |
 
@@ -58,9 +57,9 @@ Codex hook state is session-aware. Each session stores its own latest signal, th
 flashing red > flashing yellow > flashing green (work) > steady green
 ```
 
-For example, if one Codex session is waiting for permission and another session starts working, the light stays flashing red. If one session is waiting for you to read a result and another session is working, the light stays flashing yellow.
+For example, if one Codex session is waiting for permission and another session starts working, the light stays flashing yellow. If one session is waiting for you to read a result and another session is working, the light stays flashing yellow.
 
-When a tracked session ends, the runtime removes its record and recomputes the aggregate: if other sessions are still working, the light shows the working cycle; if no sessions remain, the light settles on steady green. Red and yellow alerts stay higher priority, so an active permission, blocked, attention, or done state is not cleared by another session ending.
+When a tracked session ends, the runtime removes its record and recomputes the aggregate: if other sessions are still working, the light shows the working cycle; if no sessions remain, the light settles on steady green. Red and yellow alerts stay higher priority, so an active permission, blocked, or attention state is not cleared by another session ending.
 
 ## Try It
 
@@ -79,11 +78,11 @@ $APP status
 | `UserPromptSubmit` | `thinking` | flashing green |
 | `PreToolUse` | `working` | flashing green |
 | `PostToolUse` | `tool_done` | flashing green |
-| `PostToolUseFailure` | `blocked` | flashing red |
+| `PostToolUseFailure` | *(no change)* | keeps working state — red is reserved for failures that stop the agent |
 | `PreCompact` | `working` | flashing green |
 | `SubagentStart` | `working` | flashing green |
 | `SubagentStop` | `tool_done` | flashing green |
-| `PermissionRequest` | `permission` | flashing red |
+| `PermissionRequest` | `permission` | flashing yellow |
 | `Notification` | `attention` | flashing yellow |
 | `Stop` | `turn_end` | clears non-urgent session state |
 | `SessionEnd` | `session_end` | clears the session, then aggregate state |

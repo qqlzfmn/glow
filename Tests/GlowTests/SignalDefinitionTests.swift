@@ -6,10 +6,10 @@ import Foundation
 
     // MARK: - Registry completeness
 
-    @Test func allElevenSignalsDefined() {
+    @Test func allSignalsDefined() {
         let expected: Set<String> = [
             "idle", "thinking", "working", "tool_done",
-            "attention", "permission", "blocked", "done",
+            "attention", "permission", "blocked",
             "session_start", "session_end", "off",
         ]
         #expect(Set(SIGNAL_DEFINITIONS.keys) == expected)
@@ -45,7 +45,7 @@ import Foundation
     }
 
     @Test func aggregateAttentionSet() {
-        for signal in ["attention", "done"] {
+        for signal in ["attention"] {
             let sessions = [
                 "a": entry(signal),
                 "b": entry("working"),

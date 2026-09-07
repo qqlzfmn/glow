@@ -14,7 +14,7 @@
 | `idle` | 常亮绿 |
 | `session_start` / `session_end` | 常亮绿 |
 | `thinking` / `working` / `tool_done` | 闪烁绿 |
-| `permission` / `attention` / `done` | 闪烁黄 |
+| `permission` / `attention` | 闪烁黄 |
 | `blocked` | 闪烁红 |
 | `off` | 全灭 |
 
@@ -29,7 +29,7 @@
 **聚合优先级（多会话同时存在时）**
 
 ```
-blocked > permission > (attention / done) > (working / thinking / tool_done) > idle
+blocked > permission > attention > (working / thinking / tool_done) > idle
 ```
 
 ---
@@ -42,7 +42,7 @@ blocked > permission > (attention / done) > (working / thinking / tool_done) > i
 | `UserPromptSubmit` | `thinking` | 闪烁绿 | 写入 | 用户提交提问 |
 | `PreToolUse` | `working` | 闪烁绿 | 写入 | 工具即将执行 |
 | `PostToolUse` | `tool_done` | 闪烁绿 | 写入 | 工具成功完成 |
-| `PostToolUseFailure` | `blocked` | 闪烁红 | 写入 | 工具执行失败 |
+| `PostToolUseFailure` | *(不改变状态)* | — | 保持 | 非终止失败：agent 通常会继续，红灯仅保留给失败导致停止；终止失败由 `Stop`+`stop_reason` 抛住 |
 | `PreCompact` | `working` | 闪烁绿 | 写入 | 上下文压缩前 |
 | `SubagentStart` | `working` | 闪烁绿 | 写入 | 子代理启动 |
 | `SubagentStop` | `tool_done` | 闪烁绿 | 写入 | 子代理结束 |
@@ -79,7 +79,7 @@ blocked > permission > (attention / done) > (working / thinking / tool_done) > i
 | `input` | `UserPromptSubmit` | `thinking` | 闪烁绿 | 写入 | 交互式输入 |
 | `agent_start` | `UserPromptSubmit` | `thinking` | 闪烁绿 | 写入 | headless/print 模式无 `input`，替补工作起始 |
 | `tool_call` | `PreToolUse` | `working` | 闪烁绿 | 写入 | 工具即将执行 |
-| `tool_result` | `PostToolUse`（成功）/ `PostToolUseFailure`（`isError`） | `tool_done` / `blocked` | 闪烁绿 / 闪烁红 | 写入 | 工具结果返回 |
+| `tool_result` | `PostToolUse`（含失败结果） | `tool_done` | 闪烁绿 | 写入 | 工具结果返回；`isError` 不切红——失败未停止，保持工作态 |
 | `turn_end` | `Stop`（**本次修复新增**） | `turn_end` | — | 删除（`permission`/`blocked` 保留） | 一轮应答完成 |
 | `session_stop` | `Stop` | `turn_end` | — | 删除（`permission`/`blocked` 保留） | 会话停止 |
 | `tool_approval_requested` | `PermissionRequest` | `permission` | 闪烁黄 ⚠️ | 写入 | 请求工具权限（文档称红，见备注 1） |
@@ -87,7 +87,7 @@ blocked > permission > (attention / done) > (working / thinking / tool_done) > i
 | `mcp_notification` | `Notification` | `attention` | 闪烁黄 | 写入 | MCP 通知 |
 | `session_before_compact` | `PreCompact` | `working` | 闪烁绿 | 写入 | 压缩前 |
 | `session_shutdown` | `SessionEnd` | `session_end` | 常亮绿 | 删除 | 会话关闭 |
-| `credential_disabled` | `PostToolUseFailure` | `blocked` | 闪烁红 | 写入 | 凭据被禁用 |
+| `credential_disabled` | `PostToolUseFailure` + `signal: blocked` | `blocked` | 闪烁红 | 写入 | 凭据被禁用：实质失败（无法继续调用工具），显式红 |
 
 **仅本地 JSONL 观测、不转发 Glow 的 pi 事件**（不影响灯）：`session_switch`、`session_branch`、`turn_start`、`agent_end`、`tool_execution_start/end`、`session_compact`、`auto_compaction_start/end`、`auto_retry_start/end`、`ttsr_triggered`、`tool_approval_resolved(approved=false)`。
 
@@ -95,11 +95,17 @@ blocked > permission > (attention / done) > (working / thinking / tool_done) > i
 
 ---
 
-## 五、已知不一致与改进候选（供你逐项决策）
+## 五、决策结果与已知例外（2026-09-07 第一性原理评审后对齐）
 
-| # | 项 | 现状 | 候选 |
-| --- | --- | --- | --- |
-| 1 | `permission` 灯色 | 代码为**闪烁黄**（`SignalDefinition`）；README/LAMP 文档写**红色**（需权限=红灯） | 二选一：改代码为红 / 改文档为黄，保持文档-实现一致 |
-| 2 | pi `agent_end` | 无转发（仅观测） | 可选：转发 `Stop`（`turn_end` 已覆盖同场景，二者择一即可） |
-| 3 | dangling working 兜底 | 仅 24h TTL（`GLOW_SESSION_TTL_SECONDS` 可调，默认 86400s） | 可选：任务完成类信号自动降级/短 TTL，需权衡长任务 |
-| 4 | Codex key 漂移 | payload 缺会话标识时降级 `cwd:`/`global` | 待实测 Codex 事件 payload 字段稳定性（当前无不良证据） |
+> 灯语第一性原理：**无任务 = 绿常亮；任务中 = 绿闪；需操作 = 黄闪；失败导致停止 = 红闪。**
+> 已按此原则完成一轮校准：`done` 废弃、`permission` 明确为黄、非终止失败不红。
+
+| # | 项 | 决策后状态 |
+| --- | --- | --- |
+| 1 | `permission` 灯色 | **已对齐为闪烁黄**（需操作=黄，含授权）；红仅保留给 `blocked`（阻塞/失败停止）。README/LAMP 已同步 |
+| 2 | `done` 信号 | **已废弃**（从 `SignalDefinition` 与文档移除）。正常完成任务且 agent 等待 = `idle` 绿常亮；agent 明确要求你读/继续 = `attention` 黄；如需显式表达“完成任务待确认”，走显式 `signal` 字段直发 `attention` |
+| 3 | 非终止工具失败 | **不改变状态**（保持工作态）——Claude `PostToolUseFailure` 返回 nil；pi `tool_result(isError)` 仍转 `PostToolUse`（绿）。终止失败由 `Stop`+`stop_reason`（error/max_tokens）→ `blocked` 红；pi `credential_disabled` 经显式 `signal: blocked` 红 |
+| 4 | Codex 失败字段 | **保持字段级失败即红（唯一例外）**——Codex hook schema 无终止型失败信号（无 `stop_reason` 类字段），无法区分“工具失败将重试”与“致命错误”；保留红防漏报，代价是工具级失败闪红 |
+| 5 | pi `agent_end` | 无转发（仅观测），`turn_end` 已覆盖同场景，保持 |
+| 6 | dangling working 兜底 | 仅 24h TTL（`GLOW_SESSION_TTL_SECONDS` 可调，默认 86400s） |
+| 7 | Codex key 漂移 | payload 缺会话标识时降级 `cwd:`/`global`，待实测（当前无不良证据） |
